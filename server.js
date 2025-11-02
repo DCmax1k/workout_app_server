@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 const cors = require("cors");
 
 // VERSION
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
@@ -47,11 +47,8 @@ app.post('/auth', authToken, async (req, res) => {
     try {
         const u = await User.findOne({_id: req.userId});
         if (!u) {
-            return res.json({status: 'error', message: 'Bad authentication! Redirecting...'})
+            return res.json({status: 'error', message: 'Bad authentication!'})
         };
-        if (u.trouble && u.trouble.frozen) {
-            return res.json({status: 'frozen', message: 'Your account has been frozen. Try again later or contact an administrator.'});
-        }
         
 
         // Change ararys of id's to id's and the name
@@ -95,6 +92,9 @@ app.post('/auth', authToken, async (req, res) => {
 
         }
 
+        // Testing functions - Fake delay, or error status
+        //await new Promise(resolve => setTimeout(resolve, 5000));
+        //return res.json({status: 'error', message: "Testing error message that is super long to test the alert notification that I made yesterday!"});
 
         return res.json({
             status: 'success',
