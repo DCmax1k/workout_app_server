@@ -74,6 +74,14 @@ const UserSchema = new mongoose.Schema({
     
     // Everything below is only in the db if the user uploads the data to the backend
 
+    streak: {
+        type: Object,
+        default: {
+            longestStreak: 0,
+            currentStreak: 0,
+            achievementAmount: 0,
+        }
+    },
     settings: {
         type: Object,
         default: {}

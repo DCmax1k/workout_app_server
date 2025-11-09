@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 const cors = require("cors");
 
 // VERSION
-const VERSION = "1.0.1";
+const VERSION = "1.0.3";
 
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
@@ -40,6 +40,24 @@ app.use('/admin', adminRoute);
 
 // DB models
 const User = require('./models/User');
+const Activity = require('./models/Activity');
+const setupSocket = require('./socket');
+
+const userIdToInfo = async (ids) => {
+    return await Promise.all(ids.map(async f => {
+        const friend = await User.findById(f);
+        if (!friend) return null;
+        return {
+            username: friend.username,
+            _id: f,
+            profileImg: friend.profileImg,
+            usernameDecoration: friend.usernameDecoration,
+            // If friend is sharing info
+            pastWorkoutsLength: friend.pastWorkouts.length,
+
+        };
+    }));
+}
 
 // Get necesasry user info from db when authenticating
 app.post('/auth', authToken, async (req, res) => {
@@ -50,19 +68,11 @@ app.post('/auth', authToken, async (req, res) => {
             return res.json({status: 'error', message: 'Bad authentication!'})
         };
         
+        // GET NOTIFICATIONS - coming soon - Be sure to get the ids of the user from notification model, and use the friends info to fill calculated below
 
-        // Change ararys of id's to id's and the name
-        // friends = [id, id, id] -> [{id: 32423423, username: "DCmax1k",}];
-        // groups = [{name: 'PorkGroup', id: '234234234',}];
-        const newFriends = await Promise.all(u.friends.map(async f => {
-            const friend = await User.findById(f);
-            if (!friend) return null;
-            return {
-                username: friend.username,
-                id: f,
-
-            };
-        }));
+        // Change ararys of id's to id's and the name and data needed to show profile like stats
+        // friends = [id, id, id] -> [{id: 32423423, username: "DCmax1k", TODO: pastWorkoutsLength, favoriteExercise, longestWorkoutStreak, }];
+        const newFriends = await userIdToInfo(u.friends);
         const user = JSON.parse(JSON.stringify(u));
 
         // Modify user before sending back
@@ -70,8 +80,45 @@ app.post('/auth', authToken, async (req, res) => {
         user.password = '';
         user.verifyEmailCode = '';
 
-        const recentActivity = [];
+        // Get all recent activity from Activity modal, if user is in the sharedTo array
+        
+        // const recentActivity = [
+        //     {
+        //         ...rawActivityFromDb,
+        //         // Added dynamically
+        //         peopleDetails: {userId1: {username, usernameDecoration, premium, profileImg}}, // includes sender
+        //     }
+        // ];
 
+        const rawRecentActivity = await Activity.find({people: req.userId})
+        .sort({ timestamp: -1 })
+        .limit(20);
+        // For optimization, save people that have already been searched when going thru people in activity
+        const allPeopleDetails = {};
+
+        const recentActivity = await Promise.all(rawRecentActivity.map(async ac => {
+            const act = ac.toObject();
+            const peopleDetails = {};
+            await Promise.all(act.people.map(async pId => {
+                if (peopleDetails[pId]) return;
+                if (allPeopleDetails[pId]) return peopleDetails[pId] = allPeopleDetails[pId];
+                const p = await User.findById(pId);
+                const pInfo = {
+                    userId: pId,
+                    username: p.username,
+                    usernameDecoration: p.usernameDecoration,
+                    premium: p.premium,
+                    profileImg: p.profileImg,
+                }; 
+                peopleDetails[pId] = pInfo;
+                allPeopleDetails[pId] = pInfo;
+            }));
+
+            return {
+                ...act,
+                peopleDetails,
+            }
+        }));
         const userInfo = {
             recentActivity,
             dbId: req.userId,
@@ -89,6 +136,7 @@ app.post('/auth', authToken, async (req, res) => {
             googleId: user.googleId,
             appleId: user.appleId,
             facebookId: user.facebookId,
+            usernameDecoration: user.usernameDecoration,
 
         }
 
@@ -111,4 +159,11 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
     const server = app.listen(process.env.PORT || 3003, () => {
         console.log('Serving on port 3003...');
     });
+
+    const io = socketio(server, {
+        cors: {
+            origin: '*',
+        }
+    });
+    setupSocket(io);
 });
