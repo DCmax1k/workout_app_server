@@ -5,16 +5,7 @@ const router = express.Router();
 const User = require('../models/User');
 const Activity = require('../models/Activity');
 const deepMerge = require('../util/deepMerge');
-
-const getUserInfo = user => {
-    return {
-        _id: JSON.parse(JSON.stringify(user._id)),
-        username: user.username,
-        usernameDecoration: user.usernameDecoration,
-        profileImg: user.profileImg,
-        premium: user.premium
-    }
-}
+const getUserInfo = require('../util/getUserInfo');
 
 // Upload user data. Each key and value pair are set in db, not synced
 router.post('/uploaddata', authToken, async (req, res) => {
@@ -160,7 +151,7 @@ router.post('/activityreact', authToken, async (req, res) => {
         console.log("New reactions ", reactions);
         await activity.save();
 
-        return res.json({status: "success"});
+        return res.json({status: "success", activity: {...activity.toJSON()}});
 
     } catch(err) {
         console.error(err);
@@ -197,7 +188,7 @@ const addUser = async (user, friend) => {
 
     // Add user to friendRequests of person
     const personFriendRequests = friend.friendRequests;
-    const newPersonFriendRequests = [...personFriendRequests, {...getUserInfo(user), read: false}]
+    const newPersonFriendRequests = [{...getUserInfo(user), read: false}, ...personFriendRequests]
     friend.friendRequests = newPersonFriendRequests;
     friend.markModified("friendRequests");
     await friend.save();
@@ -240,7 +231,7 @@ router.post('/adduser', authToken, async (req, res) => {
         }
         
         
-        res.json({status: "success", });
+        res.json({status: "success", freshUserInfo: getUserInfo(user) });
 
     } catch(err) {
         console.error(err);
@@ -293,12 +284,11 @@ router.post('/unadduser', authToken, async (req, res) => {
             await removeUser(user, friend);
         } else {
             // Unadd user
-            console.log("Calling unadd");
             await unaddUser(user, friend);
         }
         
         
-        res.json({status: "success", });
+        res.json({status: "success", freshUserInfo: getUserInfo(user) });
 
     } catch(err) {
         console.error(err);
@@ -315,7 +305,7 @@ router.post('/rejectuser', authToken, async (req, res) => {
         await unaddUser(friend, user);
         
         
-        res.json({status: "success", });
+        res.json({status: "success", freshUserInfo: getUserInfo(user) });
 
     } catch(err) {
         console.error(err);

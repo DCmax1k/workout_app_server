@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 const cors = require("cors");
 
 // VERSION
-const VERSION = "1.0.3";
+const VERSION = "1.0.4";
 
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
@@ -42,6 +42,7 @@ app.use('/admin', adminRoute);
 const User = require('./models/User');
 const Activity = require('./models/Activity');
 const setupSocket = require('./socket');
+const getUserInfo = require('./util/getUserInfo');
 
 const userIdToInfo = async (ids) => {
     return await Promise.all(ids.map(async f => {
@@ -103,13 +104,14 @@ app.post('/auth', authToken, async (req, res) => {
                 if (peopleDetails[pId]) return;
                 if (allPeopleDetails[pId]) return peopleDetails[pId] = allPeopleDetails[pId];
                 const p = await User.findById(pId);
-                const pInfo = {
-                    userId: pId,
-                    username: p.username,
-                    usernameDecoration: p.usernameDecoration,
-                    premium: p.premium,
-                    profileImg: p.profileImg,
-                }; 
+                // const pInfo = {
+                //     userId: pId,
+                //     username: p.username,
+                //     usernameDecoration: p.usernameDecoration,
+                //     premium: p.premium,
+                //     profileImg: p.profileImg,
+                // }; 
+                const pInfo = {...getUserInfo(p), userId: pId};
                 peopleDetails[pId] = pInfo;
                 allPeopleDetails[pId] = pInfo;
             }));
