@@ -17,7 +17,7 @@ const setupSocket = (io) => {
     socket.on("join_room", (userID) => {
         const room_userID = `u_${userID}`;
         socket.join(room_userID);
-        console.log('User joined room: ', room_userID);
+        //console.log('User joined room: ', room_userID);
     });
 
     socket.on("send_recent_activity", ({jsonWebToken, dbActivity}) => {
