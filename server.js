@@ -44,15 +44,12 @@ const Activity = require('./models/Activity');
 const setupSocket = require('./socket');
 const getUserInfo = require('./util/getUserInfo');
 
-const userIdToInfo = async (ids) => {
+const friendIdToInfo = async (ids) => {
     return await Promise.all(ids.map(async f => {
         const friend = await User.findById(f);
         if (!friend) return null;
         return {
-            username: friend.username,
-            _id: f,
-            profileImg: friend.profileImg,
-            usernameDecoration: friend.usernameDecoration,
+            ...getUserInfo(friend),
             // If friend is sharing info
             pastWorkoutsLength: friend.pastWorkouts.length,
 
@@ -73,7 +70,7 @@ app.post('/auth', authToken, async (req, res) => {
 
         // Change ararys of id's to id's and the name and data needed to show profile like stats
         // friends = [id, id, id] -> [{id: 32423423, username: "DCmax1k", TODO: pastWorkoutsLength, favoriteExercise, longestWorkoutStreak, }];
-        const newFriends = await userIdToInfo(u.friends);
+        const newFriends = await friendIdToInfo(u.friends);
         const user = JSON.parse(JSON.stringify(u));
 
         // Modify user before sending back
