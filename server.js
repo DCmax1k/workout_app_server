@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 const cors = require("cors");
 
 // VERSION
-const VERSION = "1.0.5";
+const VERSION = "1.0.7";
 
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
@@ -90,7 +90,7 @@ app.post('/auth', authToken, async (req, res) => {
 
         const rawRecentActivity = await Activity.find({people: req.userId})
         .sort({ timestamp: -1 })
-        .limit(20);
+        .limit(10);
         // For optimization, save people that have already been searched when going thru people in activity
         const allPeopleDetails = {};
 
@@ -142,10 +142,13 @@ app.post('/auth', authToken, async (req, res) => {
         // Testing functions - Fake delay, or error status
         //await new Promise(resolve => setTimeout(resolve, 5000));
         //return res.json({status: 'error', message: "Testing error message that is super long to test the alert notification that I made yesterday!"});
+        const fullLocalUser = {recentActivity, ...user};
+        //console.log("Returning full local user");
 
         return res.json({
             status: 'success',
-            userInfo,
+            userInfo, 
+            fullLocalUser,
             version: VERSION,
         });
     } catch(err) {
