@@ -143,9 +143,18 @@ html {
   display: flex;
   justify-content: center;
   align-items: center;
+  pointer-events: none;
 }
 
 .phonesCont .arrowCont img {
   width: 80vw;
   object-fit: contain;
+}
+
+.Admin {
+  width: '100%';
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
 }
