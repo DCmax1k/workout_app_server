@@ -68,6 +68,7 @@ const UserSchema = new mongoose.Schema({
         type: Object,
         default: {
             bans: [],
+            warnings: [], // {message: "warning", read: false},
             frozen: false,
         }
     },
