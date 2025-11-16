@@ -99,27 +99,28 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
       {editPerson && (
         <div style={{position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", padding: "2vh", display: "flex", flexDirection: "column", minHeight: 300, width: 200, backgroundColor: "#3f3f3fff", cursor: "pointer"}}>
           <button onClick={() => setEditPerson(null)}>close</button>
-          <div style={{marginTop: '2vh'}}></div>
+          <div style={{marginTop: '1vh'}}></div>
           <h2>{editPerson.username}</h2>
-          <div style={{marginTop: '2vh'}}></div>
+          <h4>{editPerson.friends.length} friend{editPerson.friends.length===1 ? "":"s"}</h4>
+          <div style={{marginTop: '1vh'}}></div>
           <label>WARN</label>
           <input value={warnValue} onInput={(e) => setWarnValue(e.target.value)} />
           {warnValue.length > 0 && (<button onClick={submitWarn}>Submit</button>)}
-          <div style={{marginTop: '2vh'}}></div>
+          <div style={{marginTop: '1vh'}}></div>
           <label>Prefix</label>
           <input value={prefixValue} onInput={(e) => setPrefixValue(e.target.value)} />
-          <button onClick={submitPrefix}>Submit</button>
-          <div style={{marginTop: '2vh'}}></div>
+          {editPerson.usernameDecoration.prefix !== prefixValue && (<button onClick={submitPrefix}>Submit</button>)}
+          <div style={{marginTop: '1vh'}}></div>
           <label>Prefix Color</label>
           <input value={prefixColorValue} type='color' onInput={(e) => setPrefixColorValue(e.target.value)} />
-          <button onClick={submitPrefixColor}>Submit</button>
-          <div style={{marginTop: '2vh'}}></div>
+          {editPerson.usernameDecoration.prefixColor !== prefixColorValue && (<button onClick={submitPrefixColor}>Submit</button>)}
+          <div style={{marginTop: '1vh'}}></div>
           <label>Set password</label>
           <input value={passwordValue} onInput={(e) => setPasswordValue(e.target.value)} />
           {passwordValue.length > 0 && (<button onClick={submitPassword}>Submit</button>)}
-          <div style={{marginTop: '2vh'}}></div>
+          <div style={{marginTop: '1vh'}}></div>
           <button onClick={() => editPerson.premium ? assignPremium(false) : assignPremium(true)}>{editPerson.premium ? "Revoke Premium" : "Grant Premium"}</button>
-          <div style={{marginTop: '2vh'}}></div>
+          <div style={{marginTop: '1vh'}}></div>
           <button onClick={() => editPerson.trouble.frozen ? assignFreeze(false) : assignFreeze(true)}>{editPerson.trouble.frozen ? "Unfreeze" : "Freeze Account"}</button>
         </div>
       )}
