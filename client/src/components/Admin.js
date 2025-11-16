@@ -109,11 +109,11 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
           <div style={{marginTop: '1vh'}}></div>
           <label>Prefix</label>
           <input value={prefixValue} onInput={(e) => setPrefixValue(e.target.value)} />
-          {editPerson.usernameDecoration.prefix !== prefixValue && (<button onClick={submitPrefix}>Submit</button>)}
+          {editPerson.usernameDecoration?.prefix !== prefixValue && (<button onClick={submitPrefix}>Submit</button>)}
           <div style={{marginTop: '1vh'}}></div>
           <label>Prefix Color</label>
           <input value={prefixColorValue} type='color' onInput={(e) => setPrefixColorValue(e.target.value)} />
-          {editPerson.usernameDecoration.prefixColor !== prefixColorValue && (<button onClick={submitPrefixColor}>Submit</button>)}
+          {editPerson.usernameDecoration?.prefixColor !== prefixColorValue && (<button onClick={submitPrefixColor}>Submit</button>)}
           <div style={{marginTop: '1vh'}}></div>
           <label>Set password</label>
           <input value={passwordValue} onInput={(e) => setPasswordValue(e.target.value)} />

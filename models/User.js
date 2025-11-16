@@ -89,7 +89,10 @@ const UserSchema = new mongoose.Schema({
     },
     usernameDecoration: {
         type: Object,
-        default: {}
+        default: {
+            prefix: "",
+            prefixColor: "#000",
+        }
     },
     
     schedule: {
