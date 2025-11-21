@@ -6,6 +6,8 @@ const User = require('../models/User');
 const Activity = require('../models/Activity');
 const deepMerge = require('../util/deepMerge');
 const getUserInfo = require('../util/getUserInfo');
+const findInsertIndex = require('../util/findInsertIndex');
+const getDateKey = require('../util/getDateKey');
 
 // Upload user data. Each key and value pair are set in db, not synced
 router.post('/uploaddata', authToken, async (req, res) => {
@@ -16,6 +18,10 @@ router.post('/uploaddata', authToken, async (req, res) => {
         const keys = Object.keys(dataToUpload);
 
         keys.forEach(key => {
+            // Checks for protection
+            if (['_id', 'dbId', 'username', 'usernameDecoration', 'name', 'email', 'dateJoined', 'rank', 'premium', 'friends', 'subscriptions', 'profileImg', 'trouble', 'googleId', 'appleId', 'facebookId'].includes(key)) {
+                return;
+            }
             user[key] = dataToUpload[key];
         });
 
@@ -81,12 +87,17 @@ router.post('/requestactivity', authToken, async (req, res) => {
         // if an achievement one, check if already posted
         // Check if already notified users of this activity - need only for certain details objects
         if (showAchievement) {
+            if (user.streak.achievementAmount < activityData.details.totalWorkouts) {
+                user.streak.achievementAmount = activityData.details.totalWorkouts
+                await user.save();
+            }
+
             console.log("Show achievement, checking...");
             const allActivityByUser = await Activity.find({userId: req.userId, type: "complete_workout_achievement"});
             if (allActivityByUser.map(a => a.details.totalWorkouts).includes(activityData.details.totalWorkouts)) {
                 showAchievement = false;
                 activityData.type = "complete_workout";
-            };
+            }
         }
         
 
@@ -332,5 +343,336 @@ router.post('/readallnotis', authToken, async (req, res) => {
     }
 });
 
+router.post('/saveworkout', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {workout} = req.body;
+
+        const savedWorkouts = user.savedWorkouts;
+        const idx = savedWorkouts.findIndex(w => w._id === workout._id);
+        if (idx >= 0) {
+            // Update existing
+            savedWorkouts[idx] = workout;
+        } else {
+            // New save
+            savedWorkouts.unshift(workout);
+        }
+        user.savedWorkouts = savedWorkouts;
+        user.markModified("savedWorkouts");
+        await user.save();
+        
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/removeworkout', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {workoutID} = req.body;
+
+        const savedWorkouts = user.savedWorkouts;
+        const newSavedWorkouts = savedWorkouts.filter(w => w.id !== workoutID);
+        user.savedWorkouts = newSavedWorkouts;
+
+        // Remove from old schedule if exists
+        let schedule = user.schedule;
+        const newRotation = user.schedule.rotation.filter(id => id !== workoutID);
+        schedule = {...schedule, rotation: newRotation}
+        schedule = {...schedule, currentIndex: 0}
+        updateUser({schedule});
+
+        user.markModified("savedWorkouts");
+        await user.save();
+        
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+
+router.post('/updatesettings', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {key, value} = req.body;
+
+        user.settings[key] = value;
+        user.markModified("settings");
+        await user.save();
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/pushloggingweightlayout', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {category, obj} = req.body;
+        
+        const cData = user.tracking.logging[category].data;
+        if (cData.length === 0 || new Date(cData[cData.length -1].date).getTime() < new Date(obj.date).getTime()) {
+            cData.push(obj);
+        } else {
+            const idx = findInsertIndex(cData.map(d => d.date), obj.date);
+            cData.splice(idx, 0, obj);
+        }
+        
+        user.tracking.logging[category].data = cData;
+        user.markModified("tracking");
+        await user.save();
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/deletedatapoint', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {category, timeOfData} = req.body;
+        
+        const dataa = user.tracking.logging[category].data;
+        const ind = dataa.findIndex(d => d.date === timeOfData);
+        const newData = JSON.parse(JSON.stringify(dataa));
+        newData.splice(ind, 1);
+        
+        user.tracking.logging[category].data = newData;
+        user.markModified("tracking");
+        await user.save();
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/savelogginggoal', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {category, value} = req.body;
+        
+        user.tracking.logging[category].extraData.goal = value;
+        user.markModified("tracking");
+        await user.save();
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/addloggingwaterlayout', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {category, valueToAdd} = req.body;
+        
+
+        const widget = user.tracking.logging[category];
+        const cData = widget.data;
+        const currentTime = new Date();
+        const newTime = currentTime.getTime();
+
+        const dataEntriesOnDate = widget.data.filter(k => new Date(k.date).toDateString() === currentTime.toDateString());
+        if (dataEntriesOnDate.length > 0) {
+            // Edit existing entry
+            const entryToEdit = dataEntriesOnDate[0];
+            const entryIndex = cData.findIndex(e => e.date === entryToEdit.date);
+            const obj = {date: newTime, amount: valueToAdd+entryToEdit.amount};
+            
+            cData[entryIndex] = obj;
+            user.tracking.logging[category].data = cData;
+        } else {
+            // Add new entry
+            if (cData.length === 0 || new Date(cData[cData.length -1].date).getTime() < new Date(newTime).getTime()) {
+                const obj = {date: newTime, amount: valueToAdd};
+                cData.push(obj);
+
+            } else {
+                const idx = findInsertIndex(cData.map(d => d.date), newTime);
+                const obj = {date: newTime, amount: valueToAdd};
+                cData.splice(idx, 0, obj);
+
+            }
+            user.tracking.logging[category].data = cData;
+        }
+
+
+        user.markModified("tracking");
+        await user.save();
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/savemacrogoal', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {key, value} = req.body;
+        
+        user.tracking.nutrition[key].extraData.goal = value;
+        user.markModified("tracking");
+        await user.save();
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/savemeal', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {meal} = req.body;
+
+        const savedMeals = user.savedMeals;
+        const idx = savedMeals.findIndex(m => m._id === meal._id);
+        if (idx >= 0) {
+            // Update existing
+            savedMeals[idx] = meal;
+        } else {
+            // New save
+            savedMeals.unshift(meal);
+        }
+        user.savedMeals = savedMeals;
+        user.markModified("savedMeals");
+        await user.save();
+        
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/removemeal', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {meal} = req.body;
+
+        const savedMeals = user.savedMeals;
+        const newSavedMeals = savedMeals.filter(m => m.id !== meal.id);
+        user.savedMeals = newSavedMeals;
+
+        user.markModified("savedMeals");
+        await user.save();
+        
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/logconsumption', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {meal} = req.body;
+        const dateKey = getDateKey(meal.date);
+        const consumedMeals = user.consumedMeals;
+        const todaysMeals = consumedMeals[dateKey] ?? [];
+        const newMeals = [meal, ...todaysMeals];
+        const newConsumedMeals = {...consumedMeals, [dateKey]: newMeals};
+        user.consumedMeals = newConsumedMeals;
+        user.markModified("consumedMeals");
+        await user.save();
+
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/removeconsumption', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {meal} = req.body;
+        const dateKey = getDateKey(meal.date);
+        const consumedMeals = user.consumedMeals;
+        const todaysMeals = consumedMeals[dateKey] ?? [];
+        const newMeals = todaysMeals.filter(m => m.id !== meal.id);
+        const newConsumedMeals = {...consumedMeals, [dateKey]: newMeals};
+        user.consumedMeals = newConsumedMeals;
+        user.markModified("consumedMeals");
+        await user.save();
+
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/savefood', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {food} = req.body;
+
+        const customFoods = user.customFoods;
+        customFoods[food.id] = food;
+        user.customFoods = customFoods;
+        
+        user.markModified("customFoods");
+        await user.save();
+        
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/saveexercise', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {exercise} = req.body;
+
+        const createdExercises = user.createdExercises;
+        createdExercises.unshift(exercise);
+        user.createdExercises = createdExercises;
+        user.markModified("createdExercises");
+        await user.save();
+        
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
 
 module.exports = router;
