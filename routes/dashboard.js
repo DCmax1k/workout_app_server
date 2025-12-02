@@ -137,6 +137,25 @@ router.post('/requestactivity', authToken, async (req, res) => {
     }
 });
 
+router.post('/logpastworkout', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {data} = req.body;
+
+        const pastWorkouts = user.pastWorkouts;
+        pastWorkouts.push(data);
+        user.pastWorkouts = pastWorkouts;
+        user.markModified("pastWorkouts");
+        await user.save();
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
 // Add reaction to 
 router.post('/activityreact', authToken, async (req, res) => {
     try {
