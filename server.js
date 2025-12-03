@@ -101,6 +101,7 @@ app.post('/auth', authToken, async (req, res) => {
                 if (peopleDetails[pId]) return;
                 if (allPeopleDetails[pId]) return peopleDetails[pId] = allPeopleDetails[pId];
                 const p = await User.findById(pId);
+                if (!p) return;
                 // const pInfo = {
                 //     userId: pId,
                 //     username: p.username,
