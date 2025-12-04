@@ -28,6 +28,9 @@ app.get('/', (req, res) => {
 app.get('/admin', (req, res) => {
     res.sendFile(__dirname + '/client/build/index.html');
 });
+app.get('/privacypolicy', (req, res) => {
+    res.sendFile(__dirname + '/client/build/privacypolicy.html');
+});
 
 const dashboardRoute = require('./routes/dashboard');
 app.use('/dashboard', dashboardRoute);
