@@ -441,7 +441,9 @@ router.post('/pushloggingweightlayout', authToken, async (req, res) => {
         if (!user) return res.json({status: "error", message: "User not found"});
         const {category, obj} = req.body;
         
-        const cData = user.tracking.logging[category].data;
+        const c = user.tracking.logging[category];
+        if (!c) user.tracking.logging[category] = {};
+        const cData = user.tracking.logging[category].data ?? [];
         if (cData.length === 0 || new Date(cData[cData.length -1].date).getTime() < new Date(obj.date).getTime()) {
             cData.push(obj);
         } else {

@@ -76,6 +76,7 @@ const UserSchema = new mongoose.Schema({
     // Everything below is only in the db if the user uploads the data to the backend
 
     streak: {
+        required: true,
         type: Object,
         default: {
             longestStreak: 0,
@@ -84,64 +85,184 @@ const UserSchema = new mongoose.Schema({
         }
     },
     settings: {
+        required: true,
         type: Object,
         default: {}
     },
     usernameDecoration: {
+        required: true,
         type: Object,
         default: {
             prefix: "",
             prefixColor: "#000",
+            description: "",
         }
     },
     
     schedule: {
+        required: true,
         type: Object,
         default: {}
     },
     archivedExercises: {
+        required: true,
         type: Object,
         default: {} 
     },
     createdExercises: {
+        required: true,
         type: [Object],
         default: [] 
     },
     completedExercises: {
+        required: true,
         type: Object,
         default: {} 
     },
     savedWorkouts: {
+        required: true,
         type: [Object],
         default: [] 
     },
     customFoods: {
+        required: true,
         type: Object,
         default: {} 
     },
     archivedFoods: {
+        required: true,
         type: Object,
         default: {} 
     },
     foodCategories: {
+        required: true,
         type: [String],
         default: [] 
     },
     savedMeals: {
+        required: true,
         type: [Object],
         default: [], 
     },
     consumedMeals: {
+        required: true,
         type: Object,
         default: {} 
     },
     pastWorkouts: {
+        required: true,
         type: [Object],
         default: [] 
     },
     tracking: {
+        required: true,
         type: Object,
-        default: {} 
+        default: {
+            visibleWidgets: ["nutrition"],
+            nutrition: {
+                "calories": {
+                    // Data is calculated live from consumedMeals and the date
+                    extraData: {
+                        goal: 2000,
+                    }
+                },
+                "protein": {
+                    extraData: {
+                        goal: 150,
+                    }
+                },
+                "carbs": {
+                    extraData: {
+                        goal: 150,
+                    }
+                },
+                "fat": {
+                    extraData: {
+                        goal: 150,
+                    }
+                }
+            },
+            insights: {
+                expenditure: {
+                    data: [], // This data holds exercise and food data
+                    unit: "kcal",
+                    layout: "expenditure", // weight, calorie, none, bmi, expenditure
+                    color: "#DB8854",
+                    extraData: {},
+                },
+                BMI: {
+                    data: [ ], // Fully dynamically convered
+                    unit: "",
+                    layout: "bmi", // weight, calorie, none, bmi 
+                    color: "#54DBA9",
+                    extraData: {},
+                },
+            },
+            logging: {
+                "weight": {
+                    data: [  ], // [{date, amount}]
+                    unit: "lbs", // lbs, kgs
+                    layout: "weight", // weight, calorie, none, bmi 
+                    color: "#DBD654",
+                    extraData: {
+                        goal: null,
+                    },
+                    inputOptions: {
+                        increment: 0.1,
+                        range: [0, 2000],
+                        scrollItemWidth: 10,
+                        defaultValue: 150,
+                    }
+                },
+                "sleep amount": {
+                    data: [  ],
+                    unit: "hrs",
+                    layout: "weight", // weight, calorie, none, bmi
+                    color: "#DB5454", 
+                    extraData: {
+                        goal: 8,
+                    },
+                    inputOptions: {
+                        increment: 0.1,
+                        range: [0, 30],
+                        scrollItemWidth: 20,
+                        defaultValue: 8,
+                    }
+                },
+                "sleep quality": {
+                    data: [ ],
+                    unit: "/10",
+                    layout: "weight", // weight, calorie, none, bmi 
+                    color: "#DB8854",
+                    extraData: {
+                        goal: null,
+                    },
+                    inputOptions: {
+                        increment: 0.1,
+                        range: [0, 10],
+                        scrollItemWidth: 50,
+                        defaultValue: 10,
+                    }
+                },
+                "water intake": {
+                    data: [], // [{date, amount,}] // in cups
+                    unit: "cups",
+                    layout: "water", // weight, calorie, none, bmi 
+                    color: "#546FDB",
+                    extraData: {
+                        goal: 15, // cups
+                        valueToAdd: 1,
+                    },
+                    inputOptions: {
+                        increment: 0.1,
+                        range: [0, 100],
+                        scrollItemWidth: 10,
+                        defaultValue: 0,
+                    }
+                },
+
+            }
+        } 
     },
     googleId: {
         type: String,
