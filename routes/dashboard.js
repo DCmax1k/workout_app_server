@@ -367,9 +367,9 @@ router.post('/saveworkout', authToken, async (req, res) => {
         const user = await User.findById(req.userId);
         if (!user) return res.json({status: "error", message: "User not found"});
         const {workout} = req.body;
-
+        
         const savedWorkouts = user.savedWorkouts;
-        const idx = savedWorkouts.findIndex(w => w._id === workout._id);
+        const idx = savedWorkouts.findIndex(w => w.id === workout.id);
         if (idx >= 0) {
             // Update existing
             savedWorkouts[idx] = workout;
@@ -402,11 +402,11 @@ router.post('/removeworkout', authToken, async (req, res) => {
         // Remove from old schedule if exists
         let schedule = user.schedule;
         const newRotation = user.schedule.rotation.filter(id => id !== workoutID);
-        schedule = {...schedule, rotation: newRotation}
-        schedule = {...schedule, currentIndex: 0}
-        updateUser({schedule});
+        schedule = {...schedule, rotation: newRotation, currentIndex: 0}
+        user.schedule = schedule;
 
         user.markModified("savedWorkouts");
+        user.markModified("schedule");
         await user.save();
         
         
