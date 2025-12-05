@@ -261,7 +261,7 @@ router.post('/adduser', authToken, async (req, res) => {
         }
         
         
-        res.json({status: "success", freshUserInfo: getUserInfo(user) });
+        res.json({status: "success", freshUserInfo: getUserInfo(user, true) });
 
     } catch(err) {
         console.error(err);
