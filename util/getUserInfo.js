@@ -5,7 +5,9 @@ const getUserInfo = user => {
         username: user.username,
         usernameDecoration: user.usernameDecoration,
         profileImg: user.profileImg,
-        premium: user.premium
+        premium: user.premium,
+        // If user is sharing
+        pastWorkoutsLength: user.pastWorkouts.length,
     }
 }
 

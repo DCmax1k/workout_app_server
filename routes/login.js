@@ -25,9 +25,19 @@ function validateUsername(username) {
     return 'success';
 }
 
+router.post("/checkusername", async (req, res) => {
+    const checkUser = await User.findOne({ username });
+    if (checkUser) {
+        return res.json({status: 'error', message: 'Username already taken'});
+    }
+    return res.json({
+        status: "success",
+    });
+})
+
 router.post('/createaccount', async (req, res) => {
     try {
-        const {  username, email, password} = req.body;
+        const { partyType, idToken, username, email, password} = req.body;
         const checkUser = await User.findOne({ username });
         if (checkUser) {
             return res.json({status: 'error', message: 'Username already taken'});
@@ -35,12 +45,26 @@ router.post('/createaccount', async (req, res) => {
         const vUsername = validateUsername(username);
         if (vUsername !== 'success') return res.json({status: 'error', message: vUsername});
         if (!validateEmail(email)) return res.json({status: 'error', message: 'Please enter a valid email'});
-        if (!validatePass(password)) return res.json({status: 'error', message: 'Password must be at least 8 characters long'});
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const preUser = {};
+        let hashedPassword = "";
+        if (!partyType) {
+            if (!validatePass(password)) return res.json({status: 'error', message: 'Password must be at least 8 characters long'});
+            hashedPassword = await bcrypt.hash(password, 10);
+        } else if (partyType === "google") {
+            console.log("Detected google id");
+            console.log(idToken);
+            preUser.googleId = idToken;
+        } else if (partyType === "apple") {
+            preUser.appleId = idToken;
+        } else {
+            console.log("Err: Party type not google or apple");
+        }
+        
+
         const verifyEmailCode = `${Math.floor(Math.random() * 900000) + 100000}`;
-
         const user = new User({
+            ...preUser,
             username,
             email,
             password: hashedPassword,
