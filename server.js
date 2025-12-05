@@ -53,6 +53,8 @@ const friendIdToInfo = async (ids) => {
         if (!friend) return null;
         return {
             ...getUserInfo(friend),
+            // If friend is sharing info
+            pastWorkoutsLength: friend.pastWorkouts.length,
 
         };
     }));
