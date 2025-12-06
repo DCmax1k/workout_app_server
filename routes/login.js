@@ -26,6 +26,7 @@ function validateUsername(username) {
 }
 
 router.post("/checkusername", async (req, res) => {
+    const {username} = req.body;
     const checkUser = await User.findOne({ username });
     if (checkUser) {
         return res.json({status: 'error', message: 'Username already taken'});
@@ -52,8 +53,6 @@ router.post('/createaccount', async (req, res) => {
             if (!validatePass(password)) return res.json({status: 'error', message: 'Password must be at least 8 characters long'});
             hashedPassword = await bcrypt.hash(password, 10);
         } else if (partyType === "google") {
-            console.log("Detected google id");
-            console.log(idToken);
             preUser.googleId = idToken;
         } else if (partyType === "apple") {
             preUser.appleId = idToken;
@@ -91,6 +90,25 @@ router.post('/createaccount', async (req, res) => {
         console.error(err);
     }
 });
+
+router.post("/loginthirdparty", async (req, res) => {
+    const { partyType, idToken, username, email, password} = req.body;
+    let user;
+    if (!partyType) {
+        return res.json({status: 'error', message: "Party type not available"});
+    } else if (partyType === "google") {
+        user = await User.findOne({googleId: idToken})
+    } else if (partyType === "apple") {
+        user = await User.findOne({appleId: idToken})
+    } else {
+        console.log("Err: Party type not google or apple")
+    }
+
+    if (!user) return res.json({status: "success", userFound: false});
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    if (user) return res.json({status: "success", userFound: true, jsonWebToken: token});
+})
 
 router.post('/', async (req, res) => {
     try {
