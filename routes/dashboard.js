@@ -1,6 +1,7 @@
 const express = require('express');
 const authToken = require('../util/authToken');
 const router = express.Router();
+const cloudinary = require("../util/cloudinary");
 
 const User = require('../models/User');
 const Activity = require('../models/Activity');
@@ -8,6 +9,17 @@ const deepMerge = require('../util/deepMerge');
 const getUserInfo = require('../util/getUserInfo');
 const findInsertIndex = require('../util/findInsertIndex');
 const getDateKey = require('../util/getDateKey');
+
+function validateUsername(username) {
+    if (username === 'YOU') return "Username cannot be 'YOU'";
+    if (username === 'User1') return "Username cannot be 'User1'";
+    if (username.includes(',')) return 'Username cannot contain ","';
+    if (username.includes(' ')) return 'Username cannot contain " "';
+    if (username.length > 15) return 'Username cannot be longer than 15 characters';
+    if (username.length < 2) return 'Username must include at least 2 character';
+    return 'success';
+}
+
 
 // Upload user data. Each key and value pair are set in db, not synced
 router.post('/uploaddata', authToken, async (req, res) => {
@@ -71,6 +83,61 @@ router.post('/updateuser', authToken, async (req, res) => {
         console.error(err);
     }
 });
+
+router.post('/editprofile', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {key, value} = req.body;
+        switch (key) {
+            case "username":
+                
+                const vUsername = validateUsername(value);
+                if (vUsername !== 'success') return res.json({status: 'error', message: vUsername});
+                const checkUser = await User.findOne({ username: value });
+                if (checkUser) {
+                    return res.json({status: 'error', message: 'Username already taken'});
+                }
+                user.username = value;
+                await user.save();
+                break;
+            case "desc":
+                user.usernameDecoration.description = value;
+                user.markModified("usernameDecoration");
+                await user.save();
+                break;
+            case "profileImg":
+                const image = value;
+                const result = await cloudinary.uploader.upload(image, {
+                    folder: "profileImages",
+                });
+                const imageURL = result.secure_url;
+                const imageID = result.public_id;
+
+                // Delete old image here
+                const oldImageID = user.profileImg.public_id;
+                if (oldImageID) {
+                    await cloudinary.uploader.destroy(oldImageID);
+                }
+
+                // Save new url
+                user.profileImg.url = imageURL;
+                user.profileImg.public_id = imageID;
+                user.markModified("profileImg");
+                await user.save();
+                return res.json({
+                    status: 'success',
+                    imageURL,
+                    imageID,
+                });
+            default:
+                return res.json({status: 'error', message: "Key not provided"});
+        }
+        return res.json({status: "success",});
+    } catch(err) {
+        console.error(err);
+    }
+})
 
 
 router.post('/requestactivity', authToken, async (req, res) => {
