@@ -39,10 +39,27 @@ router.post("/checkusername", async (req, res) => {
 router.post('/createaccount', async (req, res) => {
     try {
         const { partyType, idToken, username, email, password} = req.body;
-        const checkUser = await User.findOne({ username });
-        if (checkUser) {
-            return res.json({status: 'error', message: 'Username already taken'});
+
+        // const checkUser = await User.findOne({ username });
+        // if (checkUser) {
+        //     return res.json({status: 'error', message: 'Username already taken'});
+        // }
+        // const checkEmail = await User.findOne({ email });
+        // if (checkEmail) {
+        //     return res.json({status: 'error', message: 'Email already taken'});
+        // }
+        const existingUser = await User.findOne({
+            $or: [{ username }, { email }]
+        });
+        if (existingUser) {
+            if (existingUser.username === username) {
+                return res.json({ status: 'error', message: 'Username already taken' });
+            }
+            if (existingUser.email === email) {
+                return res.json({ status: 'error', message: 'Email already taken' });
+            }
         }
+
         const vUsername = validateUsername(username);
         if (vUsername !== 'success') return res.json({status: 'error', message: vUsername});
         if (!validateEmail(email)) return res.json({status: 'error', message: 'Please enter a valid email'});

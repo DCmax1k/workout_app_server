@@ -1,5 +1,6 @@
 const express = require('express');
 const authToken = require('../util/authToken');
+const bcrypt = require('bcrypt');
 const router = express.Router();
 const cloudinary = require("../util/cloudinary");
 
@@ -130,8 +131,29 @@ router.post('/editprofile', authToken, async (req, res) => {
                     imageURL,
                     imageID,
                 });
+            case "email":
+                const checkEmail = await User.findOne({ email: value });
+                if (checkEmail) {
+                    return res.json({status: 'error', message: 'Email already taken'});
+                }
+                user.email = value;
+                await user.save();
+                return res.json({status: "success"});
+            case "password":
+                const checkPass = await bcrypt.compare(value, user.password);
+                if (!checkPass) {
+                    return res.json({
+                        status: 'error',
+                        message: 'Incorrect password!',
+                    });
+                }
+                const {newPassword} = req.body;
+                const hashedPassword = await bcrypt.hash(newPassword, 10);
+                user.password = hashedPassword;
+                await user.save();
+                return res.json({status: "success"});
             default:
-                return res.json({status: 'error', message: "Key not provided"});
+                return res.json({status: 'error', message: "Key doesn't match"});
         }
         return res.json({status: "success",});
     } catch(err) {
