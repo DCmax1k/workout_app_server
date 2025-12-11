@@ -724,6 +724,28 @@ router.post('/logconsumption', authToken, async (req, res) => {
     }
 });
 
+router.post('/addmealtoconsumptionday', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {meal, date, id} = req.body;
+        const dateKey = getDateKey(date);
+        const consumedMeals = user.consumedMeals;
+        const todaysMeals = consumedMeals[dateKey] ?? [];
+        const newMeals = [{...meal, id, date: date}, ...todaysMeals];
+        const newConsumedMeals = {...consumedMeals, [dateKey]: newMeals};
+        user.consumedMeals = newConsumedMeals;
+        user.markModified("consumedMeals");
+        await user.save();
+
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+
 router.post('/removeconsumption', authToken, async (req, res) => {
     try {
         const user = await User.findById(req.userId);
