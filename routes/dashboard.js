@@ -491,8 +491,8 @@ router.post('/removeworkout', authToken, async (req, res) => {
 
         // Remove from old schedule if exists
         let schedule = user.schedule;
-        const newRotation = user.schedule.rotation.filter(id => id !== workoutID);
-        schedule = {...schedule, rotation: newRotation, currentIndex: 0}
+        const newRotation = user.schedule?.rotation?.filter(id => id !== workoutID);
+        schedule = {...schedule, rotation: newRotation || [], currentIndex: 0}
         user.schedule = schedule;
 
         user.markModified("savedWorkouts");

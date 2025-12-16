@@ -102,7 +102,10 @@ const UserSchema = new mongoose.Schema({
     schedule: {
         required: true,
         type: Object,
-        default: {}
+        default: {
+            currentIndex: 0,
+            rotation: [],
+        }
     },
     archivedExercises: {
         required: true,
