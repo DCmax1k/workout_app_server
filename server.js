@@ -10,6 +10,7 @@ const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const cors = require("cors");
 
+
 // VERSION
 const VERSION = "1.0.7";
 
@@ -40,6 +41,9 @@ app.use('/login', loginRoute);
 
 const adminRoute = require('./routes/admin');
 app.use('/admin', adminRoute);
+
+const aiRoute = require('./routes/ai');
+app.use('/ai', aiRoute);
 
 // DB models
 const User = require('./models/User');

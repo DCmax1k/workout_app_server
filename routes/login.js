@@ -5,6 +5,9 @@ const jwt = require('jsonwebtoken');
 
 const authToken = require("../util/authToken");
 
+import { OAuth2Client } from "google-auth-library";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const User = require('../models/User');
 
@@ -70,9 +73,16 @@ router.post('/createaccount', async (req, res) => {
             if (!validatePass(password)) return res.json({status: 'error', message: 'Password must be at least 8 characters long'});
             hashedPassword = await bcrypt.hash(password, 10);
         } else if (partyType === "google") {
-            preUser.googleId = idToken;
+            // Verify google session idToken
+            const ticket = await googleClient.verifyIdToken({
+                idToken,
+                audience: process.env.GOOGLE_CLIENT_ID,
+            });
+            const { sub, email } = ticket.getPayload();
+            preUser.googleId = sub;
+            preUser.email = email;
         } else if (partyType === "apple") {
-            preUser.appleId = idToken;
+            //preUser.appleId = idToken;
         } else {
             console.log("Err: Party type not google or apple");
         }
@@ -80,11 +90,11 @@ router.post('/createaccount', async (req, res) => {
 
         const verifyEmailCode = `${Math.floor(Math.random() * 900000) + 100000}`;
         const user = new User({
-            ...preUser,
             username,
             email,
             password: hashedPassword,
             verifyEmailCode, 
+            ...preUser,
         });
         await user.save();
 
@@ -114,9 +124,17 @@ router.post("/loginthirdparty", async (req, res) => {
     if (!partyType) {
         return res.json({status: 'error', message: "Party type not available"});
     } else if (partyType === "google") {
-        user = await User.findOne({googleId: idToken})
+        // Verify google session idToken
+        const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        const { sub, email } = ticket.getPayload();
+        console.log("Party google, id: ", idToken);
+        console.log("Party google, sub: ", sub);
+        user = await User.findOne({googleId: sub})
     } else if (partyType === "apple") {
-        user = await User.findOne({appleId: idToken})
+        //user = await User.findOne({appleId: idToken})
     } else {
         console.log("Err: Party type not google or apple")
     }
