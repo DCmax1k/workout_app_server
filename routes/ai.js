@@ -18,6 +18,7 @@ const analyzeFood = async ({ imageBase64, userPrompt }) => {
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
+      store: true,
       messages: [
         {
           role: "system",
