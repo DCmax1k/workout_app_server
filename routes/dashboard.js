@@ -74,8 +74,6 @@ router.post('/updateuser', authToken, async (req, res) => {
         if (!user || !updates) return res.json({status: "error", message: "User not found"});
         
         const newUser = deepMerge(JSON.parse(JSON.stringify(user)), updates);
-
-        console.log(newUser);
         user = newUser;
         //await user.save();
         res.json({status: "success", });
@@ -171,7 +169,6 @@ router.post('/requestactivity', authToken, async (req, res) => {
         
         const userFriends = user.friends;
         const people = [...userFriends, req.userId];
-        console.log("People for new activity: ", people);
 
         let showAchievement = activityData.type === "complete_workout_achievement";
         // if an achievement one, check if already posted
@@ -182,7 +179,6 @@ router.post('/requestactivity', authToken, async (req, res) => {
                 await user.save();
             }
 
-            console.log("Show achievement, checking...");
             const allActivityByUser = await Activity.find({userId: req.userId, type: "complete_workout_achievement"});
             if (allActivityByUser.map(a => a.details.totalWorkouts).includes(activityData.details.totalWorkouts)) {
                 showAchievement = false;
@@ -199,7 +195,6 @@ router.post('/requestactivity', authToken, async (req, res) => {
             details: activityData.details,
             reactions: {},
         });
-        console.log("New activity: ", newActivity);
         await newActivity.save();
 
         const allPeopleDetails = {};
@@ -268,7 +263,6 @@ router.post('/activityreact', authToken, async (req, res) => {
         }
         activity.reactions = reactions;
         activity.markModified("reactions");
-        console.log("New reactions ", reactions);
         await activity.save();
 
         return res.json({status: "success", activity: {...activity.toJSON()}});
@@ -380,11 +374,7 @@ const unaddUser = async (user, friend) => {
     await user.save();
 
     // Remove user from friends friendRequests
-    console.log("Friend requests before: ", friend.friendRequests);
     const newFriendFriendRequests = friend.friendRequests.filter(fr => fr._id !== JSON.parse(JSON.stringify(user._id)));
-    console.log("Friend requests after: ", newFriendFriendRequests);
-    console.log("Should filter out friend id: ", user._id);
-    console.log("Should filter out friend id: ", JSON.parse(JSON.stringify(user._id)));
     friend.friendRequests = newFriendFriendRequests;
     friend.markModified("friendRequests");
     await friend.save();
