@@ -6,23 +6,18 @@ const getUserInfo = require('../util/getUserInfo');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const OpenAI = require("openai");
+const { GoogleGenAI } = require("@google/genai");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_TEST_KEY,
 });
 
-const analyzeFood = async ({ imageBase64, userPrompt }) => {
-  // 1. Clean the base64 string
-  const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+const ai = new GoogleGenAI({ 
+  apiKey: process.env.GEMINI_KEY ,
+});
 
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      store: true,
-      messages: [
-        {
-          role: "system",
-          content: `You are a professional nutrition analysis assistant.
+const IMAGE_ANALYSIS_INSTRUCTIONS = `
+You are a professional nutrition analysis assistant.
 
 IDENTIFICATION LOGIC:
 1. Detect if the image is a "Nutrition Facts Label" or "Actual Food" or "Other".
@@ -37,7 +32,94 @@ COLOR LOGIC:
 
 UNIT RULES:
 - Only use: unit, units, slice, slices, cup, cups, oz, tbsp, tsp, medium, bars, pieces, cans.
-- Nutrition values must be PER SINGLE UNIT.`
+- Nutrition values must be PER SINGLE UNIT.
+`;
+
+const analyzeFoodGemini = async ({ imageBase64, userPrompt }) => {
+  const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+
+  // Define the schema using your OpenAI structure
+  const responseSchema = {
+    type: "OBJECT",
+    properties: {
+      image_type: { type: "STRING", enum: ["food", "nutrition_label"] },
+      source: { type: "STRING", enum: ["estimated", "label"] },
+      foods: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING" },
+            quantity: { type: "NUMBER" },
+            unit: { 
+              type: "STRING", 
+              enum: ["unit", "units", "slice", "slices", "cup", "cups", "oz", "tbsp", "tsp", "medium", "bars", "pieces", "cans"] 
+            },
+            color: { type: "STRING", description: "A hex color code representing the food item" },
+            nutrition: {
+              type: "OBJECT",
+              properties: {
+                calories: { type: "NUMBER" },
+                protein: { type: "NUMBER" },
+                carbs: { type: "NUMBER" },
+                fat: { type: "NUMBER" }
+              },
+              required: ["calories", "protein", "carbs", "fat"]
+            },
+            description: { type: "STRING" }
+          },
+          required: ["name", "quantity", "unit", "color", "nutrition", "description"]
+        }
+      },
+      confidence: { type: "STRING", enum: ["low", "medium", "high"] }
+    },
+    required: ["image_type", "source", "foods", "confidence"]
+  };
+
+  try {
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash", 
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: responseSchema, // This "locks" the output format
+        systemInstruction: IMAGE_ANALYSIS_INSTRUCTIONS,
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: userPrompt || "Analyze this food/label." },
+            {
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: cleanBase64,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    // Reminder: In this SDK, .text is a property, not a function
+    return JSON.parse(result.text);
+
+  } catch (error) {
+    console.error("Gemini 2.0 Analysis Error:", error.message);
+    throw error;
+  }
+};
+
+const analyzeFoodOpenAi = async ({ imageBase64, userPrompt }) => {
+  const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      store: true,
+      messages: [
+        {
+          role: "system",
+          content: IMAGE_ANALYSIS_INSTRUCTIONS,
         },
         {
           role: "user",
@@ -112,6 +194,7 @@ UNIT RULES:
   }
 };
 
+
 // TESTING ROUTE
 router.get('/testai', (req, res) => {
 	const response = openai.responses.create({
@@ -169,8 +252,9 @@ router.post("/analyzefood", authToken, async (req, res) => {
     await user.save();
     
     const { imageBase64, userPrompt } = req.body;
-    const analysis = await analyzeFood({ imageBase64, userPrompt });
-    console.log("AI Analysis by :" + user.username + JSON.stringify(analysis));
+    //const analysis = await analyzeFoodOpenAi({ imageBase64, userPrompt }); // OPEN AI
+    const analysis = await analyzeFoodGemini({ imageBase64, userPrompt }); // GOOGLE GEMINI
+    console.log("AI Analysis by: " + user.username + " " + JSON.stringify(analysis));
 
 
     res.json({ 
