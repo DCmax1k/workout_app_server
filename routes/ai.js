@@ -47,7 +47,7 @@ UNIT RULES:
               type: "image_url",
               image_url: {
                 url: `data:image/jpeg;base64,${cleanBase64}`,
-                // detail: "low",
+                detail: "low",
               }
             }
           ]
