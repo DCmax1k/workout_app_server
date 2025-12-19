@@ -12,7 +12,7 @@ const cors = require("cors");
 
 
 // VERSION
-const VERSION = "1.0.7";
+const VERSION = "1.0.8";
 
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
@@ -123,6 +123,22 @@ app.post('/auth', authToken, async (req, res) => {
                 peopleDetails,
             }
         }));
+
+        // Check AI usage and credits
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const aiUsage = user.extraDetails.ai.image;
+        const lastResetDate = new Date(aiUsage.lastReset).toISOString().split('T')[0];
+
+        // LAZY RESET LOGIC (Same logic as the scan route)
+        // We update the DB now so the user sees "5 credits" immediately on their UI
+        if (user.premium && todayStr !== lastResetDate) {
+            aiUsage.credits = 5;
+            aiUsage.lastReset = now.getTime();
+            
+            user.extraDetails.ai.image = aiUsage;
+        }
+
         const userInfo = {
             recentActivity,
             dbId: req.userId,
@@ -141,6 +157,7 @@ app.post('/auth', authToken, async (req, res) => {
             appleId: user.appleId,
             facebookId: user.facebookId,
             usernameDecoration: user.usernameDecoration,
+            extraDetails: user.extraDetails,
 
         }
 

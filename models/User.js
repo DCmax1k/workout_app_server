@@ -72,6 +72,19 @@ const UserSchema = new mongoose.Schema({
             frozen: false,
         }
     },
+    extraDetails: {
+        type: Object,
+        default: {
+            ai: {
+                image: {
+                    used: 0,
+                    credits: 5,
+                    lastReset: Date.now(),
+                }
+            }
+        },
+
+    },
     
     // Everything below is only in the db if the user uploads the data to the backend
 
