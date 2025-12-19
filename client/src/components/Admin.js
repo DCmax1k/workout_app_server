@@ -91,6 +91,18 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
     setPerson(newPerson);
     window.alert("Successful");
   }
+
+  const addCredit = async () => {
+    const response = await sendData("/admin/addaicredit", {userId: editPerson._id,});
+    if (response.status !== "success") {
+      console.log(response.message);
+      return;
+    }
+    const newPerson = {...editPerson, extraDetails: {...editPerson.extraDetails, ai: {...editPerson.extraDetails.ai, image: {...editPerson.extraDetails.ai.image, credits: editPerson.extraDetails.ai.image.credits + 1}}}};
+    setPerson(newPerson);
+    window.alert("Successful");
+    
+  }
  
 
   return (
@@ -102,8 +114,11 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
           <div style={{marginTop: '1vh'}}></div>
           <h2>{editPerson.username}</h2>
           <h4>{editPerson.friends.length} friend{editPerson.friends.length===1 ? "":"s"}</h4>
+          <h4>{editPerson.extraDetails.ai.image.used} AI images used</h4>
           <div style={{marginTop: '1vh'}}></div>
-          <label>WARN</label>
+          <button onClick={addCredit}>Add 1 Credit</button>
+          <div style={{marginTop: '1vh'}}></div>
+          <label>WARN - soon</label>
           <input value={warnValue} onInput={(e) => setWarnValue(e.target.value)} />
           {warnValue.length > 0 && (<button onClick={submitWarn}>Submit</button>)}
           <div style={{marginTop: '1vh'}}></div>

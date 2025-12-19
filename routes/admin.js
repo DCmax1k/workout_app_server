@@ -16,7 +16,7 @@ router.post('/', authToken, async (req, res) => {
                 message: 'Not admin.',
             });
         }
-        const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1 });
+        const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1, extraDetails: 1 });
         
 
 
@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
         res.cookie('auth-token', token, {expires: new Date(Date.now() + 20 * 365 *  24 * 60 * 60 * 1000) });
 
-        const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1, });
+        const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1, extraDetails: 1 });
 
         return res.json({
             status: 'success',
@@ -209,6 +209,27 @@ router.post("/assignprefixcolor", authToken, async (req, res) => {
         const {userId, value} = req.body;
         const user = await User.findById(userId);
         user.set("usernameDecoration.prefixColor", value);
+        await user.save();
+        return res.json({
+            status: "success",
+        })
+
+    } catch (err) {
+        console.error(err);
+    }
+});
+router.post("/addaicredit", authToken, async (req, res) => { 
+    try {   
+        const admin = await User.findById(req.userId);
+        if (admin.rank !== 'admin') {
+            return res.json({
+                status: 'error',
+                message: 'Not admin.',
+            });
+        } 
+        const {userId, } = req.body;
+        const user = await User.findById(userId);
+        user.set("extraDetails.ai.image.credits", user.extraDetails.ai.image.credits + 1);
         await user.save();
         return res.json({
             status: "success",
