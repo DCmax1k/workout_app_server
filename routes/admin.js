@@ -139,8 +139,8 @@ router.post("/assignpremium", authToken, async (req, res) => {
         } 
         const {userId, value} = req.body;
         const user = await User.findById(userId);
-        console.log(JSON.stringify(user._id) === JSON.stringify(admin._id));
-        if (JSON.stringify(user._id) === JSON.stringify(admin._id)) return res.json({status: "error", message: "Same user error"})
+        // console.log(JSON.stringify(user._id) === JSON.stringify(admin._id));
+        // if (JSON.stringify(user._id) === JSON.stringify(admin._id)) return res.json({status: "error", message: "Same user error"})
         user.premium = value;
         await user.save();
         return res.json({

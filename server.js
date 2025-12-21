@@ -127,16 +127,23 @@ app.post('/auth', authToken, async (req, res) => {
         // Check AI usage and credits
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
-        const aiUsage = user.extraDetails.ai.image;
-        const lastResetDate = new Date(aiUsage.lastReset).toISOString().split('T')[0];
-
-        // LAZY RESET LOGIC (Same logic as the scan route)
-        // We update the DB now so the user sees "5 credits" immediately on their UI
-        if (user.premium && todayStr !== lastResetDate) {
-            aiUsage.credits = 5;
-            aiUsage.lastReset = now.getTime();
+        const aiImageUsage = user.extraDetails.ai.image;
+        const lastResetDateImage = new Date(aiImageUsage.lastReset).toISOString().split('T')[0];
+        // Reset AI image credits
+        if (user.premium && todayStr !== lastResetDateImage) {
             
-            user.extraDetails.ai.image = aiUsage;
+            aiImageUsage.credits = 10;
+            aiImageUsage.lastReset = now.getTime();
+            
+            user.extraDetails.ai.image = aiImageUsage;
+        }
+        // Reset AI food text credits
+        const aiFoodText = user.extraDetails.ai.foodText;
+        const lastResetDateFoodText = new Date(aiFoodText.lastReset).toISOString().split('T')[0];
+        if (user.premium && todayStr !== lastResetDateFoodText) {
+            aiFoodText.credits = 30;
+            aiFoodText.lastReset = now.getTime();
+            user.extraDetails.ai.foodText = aiFoodText;
         }
 
         const userInfo = {

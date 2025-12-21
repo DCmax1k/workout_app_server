@@ -5,195 +5,10 @@ const User = require('../models/User');
 const getUserInfo = require('../util/getUserInfo');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const OpenAI = require("openai");
-const { GoogleGenAI } = require("@google/genai");
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_TEST_KEY,
-});
-
-const ai = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_KEY ,
-});
-
-const IMAGE_ANALYSIS_INSTRUCTIONS = `
-You are a professional nutrition analysis assistant.
-
-IDENTIFICATION LOGIC:
-1. Detect if the image is a "Nutrition Facts Label" or "Actual Food" or "Other".
-2. If Label: Extract data exactly as written.
-3. If Food: Identify items and estimate nutrition per serving.
-4. If Other: Respond with an empty food array.
-
-COLOR LOGIC:
-- For each food, provide a hex color code (e.g., "#DB8854") that represents the food's primary color.
-- Choose a vibrant, recognizable color (e.g., a bright green for spinach, a warm brown for toast, a deep red for steak).
-- The hex code must be a string starting with "#" followed by 6 characters.
-
-UNIT RULES:
-- Only use: unit, units, slice, slices, cup, cups, oz, tbsp, tsp, medium, bars, pieces, cans.
-- Nutrition values must be PER SINGLE UNIT.
-`;
-
-const analyzeFoodGemini = async ({ imageBase64, userPrompt }) => {
-  const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-
-  // Define the schema using your OpenAI structure
-  const responseSchema = {
-    type: "OBJECT",
-    properties: {
-      image_type: { type: "STRING", enum: ["food", "nutrition_label"] },
-      source: { type: "STRING", enum: ["estimated", "label"] },
-      foods: {
-        type: "ARRAY",
-        items: {
-          type: "OBJECT",
-          properties: {
-            name: { type: "STRING" },
-            quantity: { type: "NUMBER" },
-            unit: { 
-              type: "STRING", 
-              enum: ["unit", "units", "slice", "slices", "cup", "cups", "oz", "tbsp", "tsp", "medium", "bars", "pieces", "cans"] 
-            },
-            color: { type: "STRING", description: "A hex color code representing the food item" },
-            nutrition: {
-              type: "OBJECT",
-              properties: {
-                calories: { type: "NUMBER" },
-                protein: { type: "NUMBER" },
-                carbs: { type: "NUMBER" },
-                fat: { type: "NUMBER" }
-              },
-              required: ["calories", "protein", "carbs", "fat"]
-            },
-            description: { type: "STRING" }
-          },
-          required: ["name", "quantity", "unit", "color", "nutrition", "description"]
-        }
-      },
-      confidence: { type: "STRING", enum: ["low", "medium", "high"] }
-    },
-    required: ["image_type", "source", "foods", "confidence"]
-  };
-
-  try {
-    const result = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite", 
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: responseSchema, // This "locks" the output format
-        systemInstruction: IMAGE_ANALYSIS_INSTRUCTIONS,
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: userPrompt || "Analyze this food/label." },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: cleanBase64,
-              },
-            },
-          ],
-        },
-      ],
-    });
-
-    // Reminder: In this SDK, .text is a property, not a function
-    return JSON.parse(result.text);
-
-  } catch (error) {
-    console.error("Gemini 2.0 Analysis Error:", error.message);
-    throw error;
-  }
-};
-
-const analyzeFoodOpenAi = async ({ imageBase64, userPrompt }) => {
-  const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      store: true,
-      messages: [
-        {
-          role: "system",
-          content: IMAGE_ANALYSIS_INSTRUCTIONS,
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: userPrompt || "Analyze this food/label." },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${cleanBase64}`,
-                detail: "low",
-              }
-            }
-          ]
-        }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "nutrition_analysis",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              image_type: { type: "string", enum: ["food", "nutrition_label"] },
-              source: { type: "string", enum: ["estimated", "label"] },
-              foods: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    quantity: { type: "number" },
-                    unit: {
-                      type: "string",
-                      enum: ["unit", "units", "slice", "slices", "cup", "cups", "oz", "tbsp", "tsp", "medium", "bars", "pieces", "cans"]
-                    },
-                    color: { 
-                      type: "string",
-                      description: "A hex color code representing the food item, e.g., #DB8854"
-                    },
-                    nutrition: {
-                      type: "object",
-                      properties: {
-                        calories: { type: "number" },
-                        protein: { type: "number" },
-                        carbs: { type: "number" },
-                        fat: { type: "number" }
-                      },
-                      required: ["calories", "protein", "carbs", "fat"],
-                      additionalProperties: false
-                    },
-                    description: { type: "string" }
-                  },
-                  required: ["name", "quantity", "unit", "color", "nutrition", "description"],
-                  additionalProperties: false
-                }
-              },
-              confidence: { type: "string", enum: ["low", "medium", "high"] }
-            },
-            required: ["image_type", "source", "foods", "confidence"],
-            additionalProperties: false
-          }
-        }
-      }
-    });
-
-    return JSON.parse(response.choices[0].message.content);
-
-  } catch (error) {
-    console.error("AI Analysis Error:", error);
-    throw error;
-  }
-};
-
+const analyzeFoodGemini = require('../util/ai/analyzeFoodGemini');
+const analyzeFoodOpenAi = require('../util/ai/analyzeFoodOpenAi');
+const analyzeFoodTextOpenAi = require('../util/ai/analyzeFoodTextOpenAi');
 
 // TESTING ROUTE
 router.get('/testai', (req, res) => {
@@ -217,14 +32,15 @@ router.post("/analyzefood", authToken, async (req, res) => {
     const todayStr = now.toISOString().split('T')[0]; // "2025-12-18"
     
     // Get a reference to the nested object for easier typing
-    const aiUsage = user.extraDetails.ai.image;
+    const aiUsage = user.extraDetails.ai.image ?? {credits: 10, lastReset: now.getTime()};
     const lastResetDate = new Date(aiUsage.lastReset).toISOString().split('T')[0];
 
     // 1. PREMIUM CHECK & RESET LOGIC
     if (user.premium) {
       // If it's a new day, reset the credits
       if (todayStr !== lastResetDate) {
-        aiUsage.credits = 5;
+        console.log("Resetting AI credits for " + user.username);
+        aiUsage.credits = 10;
         aiUsage.lastReset = now.getTime();
       }
     } else {
@@ -254,7 +70,7 @@ router.post("/analyzefood", authToken, async (req, res) => {
     const { imageBase64, userPrompt } = req.body;
     //const analysis = await analyzeFoodOpenAi({ imageBase64, userPrompt }); // OPEN AI
     const analysis = await analyzeFoodGemini({ imageBase64, userPrompt }); // GOOGLE GEMINI
-    console.log("AI Analysis by: " + user.username + " " + JSON.stringify(analysis));
+    console.log("AI image Analysis by " + user.username + ": " + JSON.stringify(analysis));
 
 
     res.json({ 
@@ -266,7 +82,68 @@ router.post("/analyzefood", authToken, async (req, res) => {
     console.error(err);
     res.status(500).json({ status: "error", message: "Internal server error" });
   }
-})
+});
+
+router.post("/analyzefoodtext", authToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.json({status: "error", message: "User not found"});
+
+    // AI usage limits
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0]; // "2025-12-18"
+    
+    // Get a reference to the nested object for easier typing
+    const aiUsage = user.extraDetails.ai.foodText ?? {credits: 30, lastReset: now.getTime()};
+    const lastResetDate = new Date(aiUsage.lastReset).toISOString().split('T')[0];
+
+    // 1. PREMIUM CHECK & RESET LOGIC
+    if (user.premium) {
+      // If it's a new day, reset the credits
+      if (todayStr !== lastResetDate) {
+        console.log("Resetting AI credits for " + user.username);
+        aiUsage.credits = 30;
+        aiUsage.lastReset = now.getTime();
+      }
+    } else {
+      // NON-PREMIUM: Only allow them to use what they have left (no daily refresh)
+      if (aiUsage.credits <= 0) {
+        return res.json({ 
+          status: "error", 
+          message: "Daily scans are a Premium feature. Upgrade to get 30 text scans every day!" 
+        });
+      }
+    }
+
+    // 2. FINAL CREDIT CHECK
+    if (aiUsage.credits <= 0) {
+      return res.json({ 
+        status: "error", 
+        message: "You've used all your credits. Please try again tomorrow!" 
+      });
+    }
+
+    // 3. DEDUCT CREDIT
+    aiUsage.credits -= 1;
+    aiUsage.used += 1;
+    user.markModified('extraDetails'); 
+    await user.save();
+    
+    const { userPrompt } = req.body;
+    const analysis = await analyzeFoodTextOpenAi({ userPrompt });
+    console.log("AI text scan by " + user.username + ": " + JSON.stringify(analysis));
+
+
+    res.json({ 
+      status: "success", 
+      analysis, 
+      remaining: aiUsage.credits 
+    });
+  } catch(err) {
+    console.error(err);
+    res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+});
 
 
 module.exports = router;
