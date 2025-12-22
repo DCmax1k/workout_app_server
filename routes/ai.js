@@ -48,7 +48,7 @@ router.post("/analyzefood", authToken, async (req, res) => {
       if (aiUsage.credits <= 0) {
         return res.json({ 
           status: "error", 
-          message: "Daily scans are a Premium feature. Upgrade to get 5 scans every day!" 
+          message: "Daily scans are a Premium feature. Upgrade to get 10 image scans every day!" 
         });
       }
     }

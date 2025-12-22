@@ -3,12 +3,14 @@ const app = express();
 const socketio = require('socket.io');
 const authToken = require("./util/authToken");
 
+
 // Imports
 require('dotenv').config({quiet: true});
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const cors = require("cors");
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 
 // VERSION
@@ -20,13 +22,128 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/client/build'));
 app.use(cookieParser());
 app.use(cors());
+
+// DB models
+const User = require('./models/User');
+const Activity = require('./models/Activity');
+const setupSocket = require('./socket');
+const getUserInfo = require('./util/getUserInfo');
+
+const friendIdToInfo = async (ids) => {
+    return await Promise.all(ids.map(async f => {
+        const friend = await User.findById(f);
+        if (!friend) return null;
+        return {
+            ...getUserInfo(friend, true),
+        };
+    }));
+}
+
+app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  let data;
+  let eventType;
+  // Check if webhook signing is configured.
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    // Retrieve the event by verifying the signature using the raw body and secret.
+    let event;
+    let signature = req.headers["stripe-signature"];
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        signature,
+        webhookSecret
+      );
+    } catch (err) {
+      console.log(`⚠️  Webhook signature verification failed.`);
+      return res.sendStatus(400);
+    }
+    // Extract the object from the event.
+    data = event.data;
+    eventType = event.type;
+  } else {
+    // Webhook signing is recommended, but if the secret is not configured in `config.js`,
+    // retrieve the event data directly from the request body.
+    data = req.body.data;
+    eventType = req.body.type;
+  }
+
+  switch (eventType) {
+    case 'checkout.session.completed':
+        // Payment is successful and the subscription is created.
+        // You should provision the subscription and save the customer ID to your database.
+        console.log("payment complete");
+        const session = data.object;
+        // 1. Get the user's ID (usually passed via client_reference_id or metadata)
+        const userId = session.metadata.userId; 
+        
+        // 2. Get the Stripe data
+        const stripeCustomerId = session.customer;
+        const subscriptionId = session.subscription;
+
+        // 3. Update your MongoDB
+        const user = await User.findById(userId);
+        if (!user.premiumSubscription) user.premiumSubscription = {service: "stripe", stripe: {customerId: "", subscriptionId: "",}, apple: {}, google: {}};
+        user.premiumSubscription.service = 'stripe';
+        user.premiumSubscription['stripe'].customerId = stripeCustomerId;
+        user.premiumSubscription['stripe'].subscriptionId = subscriptionId;
+        user.markModified("premiumSubscription");
+        user.premium = true;
+        user.markModified("premium");
+        await user.save();
+
+        console.log(`Provisioned subscription for ${user.username}`);
+        break;
+    case 'customer.subscription.deleted':
+        const subscription = data.object;7
+        const user2 = await User.findOne({
+            "premiumSubscription.stripe.customerId": subscription.customer
+        });
+        if (!user2) {
+            console.log("User not found with cus_id ", subscription.customer);
+            break;
+        };
+        user2.premium = false;
+        user2.premiumSubscription.stripe.subscriptionId = null;
+        user2.markModified("premium");
+        user2.markModified("premiumSubscription");
+        await user2.save();
+        
+        break;
+    case 'invoice.paid':
+      // Continue to provision the subscription as payments continue to be made.
+      // Store the status in your database and check when a user accesses your service.
+      // This approach helps you avoid hitting rate limits.
+      break;
+    case 'invoice.payment_failed':
+      // The payment failed or the customer doesn't have a valid payment method.
+      // The subscription becomes past_due. Notify your customer and send them to the
+      // customer portal to update their payment information.
+      break;
+    default:
+      // Unhandled event type
+  }
+
+  res.sendStatus(200);
+});
+
+
 app.use(express.json({limit: '50mb'}));
+
+
 
 // Main route
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/client/build/index.html');
 });
 app.get('/admin', (req, res) => {
+    res.sendFile(__dirname + '/client/build/index.html');
+});
+app.get('/dashboard', (req, res) => {
+    res.sendFile(__dirname + '/client/build/index.html');
+});
+app.get('/login', (req, res) => {
     res.sendFile(__dirname + '/client/build/index.html');
 });
 app.get('/privacypolicy', (req, res) => {
@@ -45,21 +162,8 @@ app.use('/admin', adminRoute);
 const aiRoute = require('./routes/ai');
 app.use('/ai', aiRoute);
 
-// DB models
-const User = require('./models/User');
-const Activity = require('./models/Activity');
-const setupSocket = require('./socket');
-const getUserInfo = require('./util/getUserInfo');
-
-const friendIdToInfo = async (ids) => {
-    return await Promise.all(ids.map(async f => {
-        const friend = await User.findById(f);
-        if (!friend) return null;
-        return {
-            ...getUserInfo(friend, true),
-        };
-    }));
-}
+const stripeRoute = require('./routes/stripe');
+app.use('/stripe', stripeRoute);
 
 // Get necesasry user info from db when authenticating
 app.post('/auth', authToken, async (req, res) => {
@@ -165,7 +269,7 @@ app.post('/auth', authToken, async (req, res) => {
             facebookId: user.facebookId,
             usernameDecoration: user.usernameDecoration,
             extraDetails: user.extraDetails,
-
+            premiumSubscription: user.premiumSubscription,
         }
 
         // Testing functions - Fake delay, or error status
@@ -184,6 +288,7 @@ app.post('/auth', authToken, async (req, res) => {
         console.error(err);
     }
 });
+
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
     console.log('Connected to MongoDB');

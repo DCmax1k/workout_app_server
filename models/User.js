@@ -90,6 +90,22 @@ const UserSchema = new mongoose.Schema({
         },
 
     },
+    premiumSubscription: {
+        type: Object,
+        default: {
+            service: null, // stripe, apple, google
+            stripe: {
+                customerId: "",
+                subscriptionId: "",
+            },
+            apple: {
+
+            },
+            google: {
+
+            }
+        }
+    },
     
     // Everything below is only in the db if the user uploads the data to the backend
 

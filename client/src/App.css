@@ -30,6 +30,7 @@
 html {
   overflow-x: hidden;
   background-color: #262626;
+  scroll-behavior: smooth;
 }
 
 .App {
@@ -166,4 +167,120 @@ html {
   }
 
 
+}
+
+
+#features {
+  margin-top: 5vh;
+  padding-top: 5vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30vh;
+}
+#features > h1 {
+  color: #DB8854;
+  text-align: center;
+  margin-bottom: 5vh;
+}
+.features {
+  max-width: 100vh;
+  padding-right: 3vh;
+}
+.feature {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-left: 10vh;
+  gap: 0vh;
+  position: relative;
+  margin-bottom: 2vh;
+}
+
+.feature > .bullet {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: -4vh;
+  height: 1vh;
+  width: 1vh;
+  background-color: white;
+  border-radius: 50%;
+}
+
+.feature > .top {
+  display: flex;
+  align-items: center;
+}
+.feature > .top > h1 {
+  font-size: 2.7vh;
+}
+.feature > .top > img {
+  height: 2vh;
+  width: 2vh;
+  object-fit: contain;
+  margin-left: 2vh;
+}
+
+.feature > .bottom {
+  color: #D5D5D5;
+  font-size: 1.7vh;
+}
+
+/* Login page */
+.LoginPage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5vh;
+}
+
+.LoginPage > h1 {
+  margin-bottom: 5vh;
+}
+
+.LoginPage > input {
+  outline: none;
+  border: none;
+  background-color: rgb(61, 61, 61);
+  padding: 1vh 2vh;
+  border-radius: 1vh;
+  font-size: 2.5vh;
+  margin: 2vh;
+  color: white;
+  max-width: 100vw;
+}
+
+.LoginPage > .submit {
+  padding: 2vh 5vh;
+  background-color: #6684FF;
+  margin-bottom: 4vh;
+  border-radius: 1vh;
+  cursor: pointer;
+}
+.LoginPage a {
+  color: #6684FF;
+}
+
+/* Dashboard */
+.Dashboard {
+  padding: 5vh;
+}
+.Dashboard .username {
+  display: flex;
+  align-items: center;
+  font-size: 4vh;
+
+}
+.Dashboard .username img {
+  border-radius: 50%;
+  height: 5vh;
+  width: 5vh;
+  object-fit: cover;
+  margin-right: 1vh;
+}
+
+.Dashboard .logout {
+  cursor: pointer;
 }

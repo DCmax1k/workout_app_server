@@ -3,6 +3,7 @@ import Index from './components/Index';
 import Admin from './components/Admin';
 import './App.css';
 import LoginPage from './components/LoginPage';
+import Dashboard from './components/Dashboard';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Route path='/' element={<Index />} />
           <Route path='/admin' element={<Admin />} />
           <Route path='/login' element={<LoginPage />} />
+          <Route path='/dashboard' element={<Dashboard />} />
         </Routes>
       
       </div>

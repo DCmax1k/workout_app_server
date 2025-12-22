@@ -169,6 +169,11 @@ router.post('/', async (req, res) => {
         }
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
 
+        // token to cookies if web
+        if (req.body.fromWeb) {
+            res.cookie('auth-token', token)
+        }
+
         return res.json({
             status: 'success',
             message: 'User logged in successfully!',
