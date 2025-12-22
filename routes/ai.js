@@ -32,7 +32,7 @@ router.post("/analyzefood", authToken, async (req, res) => {
     const todayStr = now.toISOString().split('T')[0]; // "2025-12-18"
     
     // Get a reference to the nested object for easier typing
-    const aiUsage = user.extraDetails.ai.image ?? {credits: 10, lastReset: now.getTime()};
+    const aiUsage = user.extraDetails.ai.image ?? {credits: 10, lastReset: now.getTime(), used: 0};
     const lastResetDate = new Date(aiUsage.lastReset).toISOString().split('T')[0];
 
     // 1. PREMIUM CHECK & RESET LOGIC
@@ -64,6 +64,7 @@ router.post("/analyzefood", authToken, async (req, res) => {
     // 3. DEDUCT CREDIT
     aiUsage.credits -= 1;
     aiUsage.used += 1;
+    user.extraDetails.ai.image = aiUsage;
     user.markModified('extraDetails'); 
     await user.save();
     
@@ -94,7 +95,7 @@ router.post("/analyzefoodtext", authToken, async (req, res) => {
     const todayStr = now.toISOString().split('T')[0]; // "2025-12-18"
     
     // Get a reference to the nested object for easier typing
-    const aiUsage = user.extraDetails.ai.foodText ?? {credits: 30, lastReset: now.getTime()};
+    const aiUsage = user.extraDetails.ai.foodText ?? {credits: 30, lastReset: now.getTime(), used: 0};
     const lastResetDate = new Date(aiUsage.lastReset).toISOString().split('T')[0];
 
     // 1. PREMIUM CHECK & RESET LOGIC
@@ -125,7 +126,9 @@ router.post("/analyzefoodtext", authToken, async (req, res) => {
 
     // 3. DEDUCT CREDIT
     aiUsage.credits -= 1;
+    if (isNaN(aiUsage.used)) aiUsage.used = 0;
     aiUsage.used += 1;
+    user.extraDetails.ai.foodText = aiUsage;
     user.markModified('extraDetails'); 
     await user.save();
     

@@ -10,8 +10,8 @@ const Index = () => {
           </div>
           <div className='links'>
             <a href='#features'>Features</a>
-            <a href='#support'>Support</a>
-            <a href='#download' className='download'>Download</a>
+            <a href='https://play.google.com/store/apps/details?id=com.caldwell.pumpedup' target='_blank' rel="noreferrer">Download</a>
+            <a href='/login' className='download'>Account</a>
           </div>
         </div>
         
@@ -29,11 +29,7 @@ const Index = () => {
         </div>
 
         <div className='phonesCont'>
-          <div className='arrowCont'>
-            <img src='/images/phone/arrow.svg' alt='svg decoration' />
-
-          </div>
-          <div className='column'>
+            <div className='column'>
             <p>Crush your workouts</p>
             <img src='/images/phone/startWorkout.png' alt='App screenshot of start a workout' />
           </div>
@@ -46,6 +42,7 @@ const Index = () => {
             <img src='/images/phone/nutrition.png' alt='App screenshot of start a workout' />
           </div>
         </div>
+          
     </div>
   )
 }

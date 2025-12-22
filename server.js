@@ -127,18 +127,18 @@ app.post('/auth', authToken, async (req, res) => {
         // Check AI usage and credits
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
-        const aiImageUsage = user.extraDetails.ai.image ?? {credits: 10, lastReset: now.getTime()};
+        const aiImageUsage = user.extraDetails.ai.image ?? {credits: 10, lastReset: now.getTime(), used: 0};
         const lastResetDateImage = new Date(aiImageUsage.lastReset).toISOString().split('T')[0];
         // Reset AI image credits
         if (user.premium && todayStr !== lastResetDateImage) {
-            
+            console.log("Resetting credits");
             aiImageUsage.credits = 10;
             aiImageUsage.lastReset = now.getTime();
             
             user.extraDetails.ai.image = aiImageUsage;
         }
         // Reset AI food text credits
-        const aiFoodText = user.extraDetails.ai.foodText ?? {credits: 30, lastReset: now.getTime()};
+        const aiFoodText = user.extraDetails.ai.foodText ?? {credits: 30, lastReset: now.getTime(), used: 0};
         const lastResetDateFoodText = new Date(aiFoodText.lastReset).toISOString().split('T')[0];
         if (user.premium && todayStr !== lastResetDateFoodText) {
             aiFoodText.credits = 30;

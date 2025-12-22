@@ -29,12 +29,12 @@
 
 html {
   overflow-x: hidden;
+  background-color: #262626;
 }
 
 .App {
   min-height: 100vh;
   width: 100vw;
-  background-color: #262626;
   color: white;
 }
 
@@ -112,14 +112,16 @@ html {
   margin-left: 4vh;
   margin-top: 1vh;
 }
-
+.Index {
+  position: 'relative'
+}
 .phonesCont {
-  position: relative;
-  margin-top: 15vh;
   display: flex;
   justify-content: center;
-  gap: 8vh;
-  padding: 0 2vh;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100vw;
+  gap: 10vh;
 }
 .phonesCont .column  {
   display: flex;
@@ -134,27 +136,34 @@ html {
   object-fit: contain;
 }
 
-.phonesCont .arrowCont {
-  width: 100vw;
-  position: absolute;
-  left: 50%;
-  top: -53vh;
-  transform: translateX(-50%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  pointer-events: none;
-}
-
-.phonesCont .arrowCont img {
-  width: 80vw;
-  object-fit: contain;
-}
-
 .Admin {
   width: '100%';
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 20px;
+}
+
+@media screen and (max-width: 80vh) {
+  
+  .links > a {
+    display: none;
+  }
+  .links > a:last-child {
+    display: block;
+  }
+
+  .index {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .index > h1 {
+    text-align: center;
+  }
+  .index > p {
+    text-align: center;
+  }
+
+
 }
