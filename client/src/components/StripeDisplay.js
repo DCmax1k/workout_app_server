@@ -57,15 +57,17 @@ export default function StripeDisplay({info, ...props}) {
     <div style={{width: "100%", marginTop: 30}} {...props}>
 
       {!isSubscribed && (<div style={{display: "flex", flexDirection: "row", gap: 10,}}>
-        {subs.map(sub => {
+
+        {subs.map((sub, i) => {
+          const msg = ["For 12 Months", "For 6 Months", "For Monthly"];
               return (
-                <button style={styles.button} onClick={() => handleSubscribe(sub.priceId)}>${sub.price} /mo</button>
+                <button style={styles.button} onClick={() => handleSubscribe(sub.priceId)}>${sub.price} /mo {msg[i]}</button>
               )
               
             })}
       </div>)}
       {isSubscribed && (
-        <div style={{display: "flex", flexDirection: "row", gap: 10, }}>
+        <div style={{display: "flex", flexDirection: "row", gap: 10, flexWrap: "wrap"}}>
           <button style={styles.button}  onClick={() => manageBilling()}>Manage Billing</button>
         </div>
       )}
@@ -85,7 +87,7 @@ const styles = {
     backgroundColor: "#546FDB",
     borderRadius: 50,
     color: "white",
-    fontSize: 25,
+    fontSize: 15,
     cursor: "pointer",
   }
 };
