@@ -54,19 +54,19 @@ export default function StripeDisplay({info, ...props}) {
 
 
   return (
-    <div {...props}>
+    <div style={{width: "100%", marginTop: 30}} {...props}>
 
-      {!isSubscribed && (<div>
+      {!isSubscribed && (<div style={{display: "flex", flexDirection: "row", gap: 10,}}>
         {subs.map(sub => {
               return (
-                <button onClick={() => handleSubscribe(sub.priceId)}>${sub.price} /mo</button>
+                <button style={styles.button} onClick={() => handleSubscribe(sub.priceId)}>${sub.price} /mo</button>
               )
               
             })}
       </div>)}
       {isSubscribed && (
-        <div>
-          <button onClick={() => manageBilling()}>Manage Billing</button>
+        <div style={{display: "flex", flexDirection: "row", gap: 10, }}>
+          <button style={styles.button}  onClick={() => manageBilling()}>Manage Billing</button>
         </div>
       )}
 
@@ -76,3 +76,16 @@ export default function StripeDisplay({info, ...props}) {
     </div>
   )
 }
+
+const styles = {
+  button: {
+    outline: "none",
+    border: "none",
+    padding: "10px 20px",
+    backgroundColor: "#546FDB",
+    borderRadius: 50,
+    color: "white",
+    fontSize: 25,
+    cursor: "pointer",
+  }
+};

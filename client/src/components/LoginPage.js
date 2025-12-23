@@ -34,6 +34,22 @@ export default function LoginPage() {
     navigate('/dashboard');
   }
 
+  const keySubmit = (e) => {
+      if (e.key === 'Enter') {
+          submit();
+      }
+  }
+
+  useEffect(() => {
+    window.addEventListener('keyup', keySubmit);
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener('keyup', keySubmit);
+    }
+  }, []);
+  
+
   return (
     <div className='LoginPage'>
         <h1>Login</h1>
@@ -45,7 +61,8 @@ export default function LoginPage() {
         </div>
 
         <div>
-          Don't have an account? <a href='https://play.google.com/store/apps/details?id=com.caldwell.pumpedup' target='_blank' rel="noreferrer"> Get The App</a>
+          Don't have an account? Get The App!
+          {/* <a href='https://play.google.com/store/apps/details?id=com.caldwell.pumpedup' target='_blank' rel="noreferrer"> Get The App</a> */}
         </div>
     </div>
   )
