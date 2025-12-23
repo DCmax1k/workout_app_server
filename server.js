@@ -144,7 +144,20 @@ app.get('/dashboard', (req, res) => {
     res.sendFile(__dirname + '/client/build/index.html');
 });
 app.get('/login', (req, res) => {
-    res.sendFile(__dirname + '/client/build/index.html');
+    if (!req.query['auth']) {
+        return res.sendFile(__dirname + '/client/build/index.html');
+    }
+    
+    let userId;
+    const token = req.query['auth'];
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) return res.json({status: "error", message: "Auth error!"});
+        userId = user.userId;
+    });
+
+    res.cookie('auth-token', token);
+    res.redirect('/dashboard');
+    
 });
 app.get('/privacypolicy', (req, res) => {
     res.sendFile(__dirname + '/client/build/privacypolicy.html');

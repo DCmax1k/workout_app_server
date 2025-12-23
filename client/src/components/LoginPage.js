@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import sendData from '../util/sendData';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export default function LoginPage() {
+
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -12,7 +13,7 @@ export default function LoginPage() {
   useEffect(() => {
     // Check auth
     const checkAuth = async () => {
-        const authResponse = await sendData('/auth', {});
+        const authResponse = await sendData('/auth',);
         if (authResponse.status !== "success") {
             return;
         }
