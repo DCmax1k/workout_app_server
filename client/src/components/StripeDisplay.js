@@ -56,7 +56,7 @@ export default function StripeDisplay({info, ...props}) {
   return (
     <div style={{width: "100%", marginTop: 30}} {...props}>
 
-      {!isSubscribed && (<div style={{display: "flex", flexDirection: "row", gap: 10,}}>
+      {!isSubscribed && (<div style={{display: "flex", flexDirection: "row", gap: 10, flexWrap: "wrap"}}>
 
         {subs.map((sub, i) => {
           const msg = ["For 12 Months", "For 6 Months", "For Monthly"];
