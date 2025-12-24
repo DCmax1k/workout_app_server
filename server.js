@@ -56,7 +56,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
         webhookSecret
       );
     } catch (err) {
-      console.log(`⚠️  Webhook signature verification failed.`);
+      console.log(`Webhook signature verification failed.`);
       return res.sendStatus(400);
     }
     // Extract the object from the event.

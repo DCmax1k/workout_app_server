@@ -1,31 +1,40 @@
+import { useState } from "react";
 import sendData from "../util/sendData";
 
 export default function StripeDisplay({info, ...props}) {
 
+  const [subOpen, setSubOpen] = useState(0);
+
   const subs = [
     {
-      name: "Premium Yearly",
+      id: 0,
+      name: "12 Months",
       price: '3.78',
       //priceId: 'price_1Sh3NPGf9fWISIA5NP009I8j', // test
       priceId: 'price_1ShGIrGf9fWISIA5lffICEvO',
       percentOff: "45",
       tag: "BEST VALUE",
+      desc: "Billed yearly as one payment of $45.36",
     },
     {
-      name: "Premium 6 Months",
+      id: 1,
+      name: "6 Months",
       price: '4.81',
       //priceId: 'price_1Sh3ytGf9fWISIA5OAABwzkz', // test
       priceId: 'price_1ShGIlGf9fWISIA5ghAAZo7m',
       percentOff: "39",
       tag: "MOST POPULAR",
+      desc: "$28.86 billed every 6 months",
     },
     {
-      name: "Premium Monthly",
+      id: 2,
+      name: "Monthly",
       price: '6.89',
       //priceId: 'price_1Sh42AGf9fWISIA5X6PycqPg', //test
       priceId: 'price_1ShGIZGf9fWISIA5Sp6Pf4XA',
       percentOff: "",
       tag: "",
+      desc: "Billed $6.89 per month",
     }
   ]
 
@@ -56,12 +65,28 @@ export default function StripeDisplay({info, ...props}) {
   return (
     <div style={{width: "100%", marginTop: 30}} {...props}>
 
-      {!isSubscribed && (<div style={{display: "flex", flexDirection: "row", gap: 10, flexWrap: "wrap"}}>
+      {!isSubscribed && (<div style={{display: "flex", flexDirection: "column", gap: 10, flexWrap: "wrap"}}>
 
         {subs.map((sub, i) => {
-          const msg = ["For 12 Months", "For 6 Months", "For Monthly"];
               return (
-                <button style={styles.button} onClick={() => handleSubscribe(sub.priceId)}>${sub.price} /mo {msg[i]}</button>
+                <div onClick={sub.id !== subOpen ? () => setSubOpen(sub.id) : null} key={sub.id} className={`subscription_card ${subOpen === sub.id ? "active":""}`}>
+                  <div className="subTop">
+                    <div className="subTopLeft">
+                      {sub.tag && (<p style={{fontSize: 12, fontWeight: "400", color: "#979797"}}>{sub.tag} <span>{sub.percentOff}% off</span></p>)}
+                      <p>{sub.name}</p>
+                    </div>
+                    <div className="subTopRight">
+                      <p style={{fontSize: 18, fontWeight: "400", color: "#ffffffff"}}>${sub.price} <span>/mo</span></p>
+                    </div>
+                  </div>
+                  <div className="subBottom">
+                    <p>{sub.desc}</p>
+                    <div onClick={() => handleSubscribe(sub.priceId)} style={styles.button}>
+                      PURCHUSE PREMIUM SUBSCRIPTION
+                    </div>
+                  </div>
+
+                </div>
               )
               
             })}
@@ -81,13 +106,16 @@ export default function StripeDisplay({info, ...props}) {
 
 const styles = {
   button: {
+    width: "100%",
+    marginBottom: 10,
     outline: "none",
     border: "none",
-    padding: "10px 20px",
     backgroundColor: "#546FDB",
-    borderRadius: 50,
+    borderRadius: 10,
     color: "white",
-    fontSize: 15,
+    fontSize: 12,
     cursor: "pointer",
+    padding: "7px 0px",
+    textAlign: "center",
   }
 };

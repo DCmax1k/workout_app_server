@@ -144,6 +144,12 @@ html {
   align-items: center;
   padding: 20px;
 }
+.Admin .button {
+  cursor: pointer;
+  background-color: grey;
+  padding: 5px 10px;
+  border-radius: 10px;
+}
 
 @media screen and (max-width: 80vh) {
   
@@ -264,23 +270,92 @@ html {
 }
 
 /* Dashboard */
+.Dashboard * {
+  font-family: "Quicksand", sans-serif !important;
+  font-weight: 600;
+}
 .Dashboard {
-  padding: 5vh;
+  padding: 10px;
 }
 .Dashboard .username {
   display: flex;
   align-items: center;
-  font-size: 4vh;
+  font-size: 20px;
 
 }
 .Dashboard .username img {
   border-radius: 50%;
-  height: 5vh;
-  width: 5vh;
+  height: 35px;
+  width: 35px;
   object-fit: cover;
   margin-right: 1vh;
 }
 
 .Dashboard .logout {
   cursor: pointer;
+  background-color: grey;
+  padding: 5px 10px;
+  border-radius: 10px;
+}
+
+.Dashboard .subscription_card {
+  height: 70px;
+  width: 400px;
+  background-color: #1f1f1f;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: height 0.5s cubic-bezier(.04,.95,.31,1);
+  padding: 0 10px;
+}
+.Dashboard .subscription_card.active {
+  height: 120px;
+  cursor: default;
+}
+.Dashboard .subscription_card > .subTop {
+  height: 70px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.Dashboard .subscription_card > .subTop > .subTopLeft {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  
+}
+.Dashboard .subscription_card > .subTop > .subTopLeft > p {
+  font-size: 15px;
+}
+.Dashboard .subscription_card > .subTop > .subTopLeft > p > span {
+  background-color: #DB8854;
+  padding: 2px 4px;
+  border-radius: 99999px;
+  color: white;
+  font-weight: "800";
+  margin-left: 3px;
+}
+
+.Dashboard .subscription_card > .subTop > .subTopRight > p > span {
+  font-size: 12px;
+  color: rgb(255, 255, 255);
+  font-weight: 300;
+}
+
+.Dashboard .subscription_card > .subBottom {
+  height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.Dashboard .subscription_card > .subBottom > p {
+  font-size: 10px;
+  font-weight: 500;
+  color: #979797;
+  text-align: center;
 }

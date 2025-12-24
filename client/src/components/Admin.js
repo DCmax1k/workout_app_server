@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Input from './Input';
 import sendData from '../util/sendData';
+import { useNavigate } from 'react-router-dom';
 
 const searchUsers = (search="", users=[]) => {
   const s = search.trim().toLowerCase();
@@ -13,6 +14,7 @@ const searchUsers = (search="", users=[]) => {
 
 // Logged in
 const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
+  const navigate = useNavigate();
 
   const [searchValue, setSearchValue] = useState("");
   const [warnValue, setWarnValue] = useState("");
@@ -141,6 +143,9 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
       )}
 
       <h1>Admin</h1>
+      <div className='button' onClick={() => navigate('/dashboard')} style={{marginTop: 5, marginBottom: 5}}>
+          Go to Dashboard
+      </div>
       <input value={searchValue} onInput={(e) => setSearchValue(e.target.value)} />
       <div style={{backgroundColor: "#444444ff", borderRadius: "1vh", padding: "2vh", width: "80%", marginTop: 20 }}>
         <div style={{padding: 10, marginBottom: 5, cursor: "pointer", width: "100%", fontSize: "1.4vh"}}>
