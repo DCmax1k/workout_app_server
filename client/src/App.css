@@ -359,3 +359,9 @@ html {
   color: #979797;
   text-align: center;
 }
+
+@media screen and (max-width: 420px) {
+  .Dashboard .subscription_card {
+    width: 100%;
+  }
+}
