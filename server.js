@@ -248,7 +248,7 @@ app.post('/auth', authToken, async (req, res) => {
         const lastResetDateImage = new Date(aiImageUsage.lastReset).toISOString().split('T')[0];
         // Reset AI image credits
         if (user.premium && todayStr !== lastResetDateImage) {
-            console.log("Resetting credits");
+            //console.log("Resetting credits");
             aiImageUsage.credits = 10;
             aiImageUsage.lastReset = now.getTime();
             

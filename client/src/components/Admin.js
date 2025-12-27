@@ -105,6 +105,22 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
     window.alert("Successful");
     
   }
+
+  const deleteAccount = async () => {
+    const response = await sendData('/admin/deleteaccount', {userId: editPerson._id});
+    if (response.status !== "success") {
+      console.log(response.message);
+      return;
+    }
+    const newUsers = users.filter(u => u._id !== editPerson._id)
+    setUsers(newUsers);
+  }
+  const requestDeleteAccount = () => {
+    const confirmation = window.confirm("Delete account named: " + editPerson.username);
+    if (confirmation) {
+      deleteAccount();
+    }
+  }
  
 
   return (
@@ -139,6 +155,8 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
           <button onClick={() => editPerson.premium ? assignPremium(false) : assignPremium(true)}>{editPerson.premium ? "Revoke Premium" : "Grant Premium"}</button>
           <div style={{marginTop: '1vh'}}></div>
           <button onClick={() => editPerson.trouble.frozen ? assignFreeze(false) : assignFreeze(true)}>{editPerson.trouble.frozen ? "Unfreeze" : "Freeze Account"}</button>
+          <div style={{marginTop: '1vh'}}></div>
+          <button style={{backgroundColor: "red"}} onClick={requestDeleteAccount}>Delete Account</button>
         </div>
       )}
 

@@ -39,7 +39,7 @@ router.post("/analyzefood", authToken, async (req, res) => {
     if (user.premium) {
       // If it's a new day, reset the credits
       if (todayStr !== lastResetDate) {
-        console.log("Resetting AI credits for " + user.username);
+        //console.log("Resetting AI credits for " + user.username);
         aiUsage.credits = 10;
         aiUsage.lastReset = now.getTime();
       }

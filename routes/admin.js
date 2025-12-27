@@ -240,5 +240,24 @@ router.post("/addaicredit", authToken, async (req, res) => {
     }
 });
 
+router.post("/deleteaccount", authToken, async (req, res) => {
+    try {
+        const admin = await User.findById(req.userId);
+        if (admin.rank !== 'admin') {
+            return res.json({
+                status: 'error',
+                message: 'Not admin.',
+            });
+        } 
+        const {userId, } = req.body;
+        await User.deleteOne({_id: userId});
+        return res.json({
+            status: "success",
+        })
+    } catch(err) {
+        console.error(err);
+    }
+})
+
 
 module.exports = router;
