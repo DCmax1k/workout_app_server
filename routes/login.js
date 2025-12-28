@@ -10,6 +10,8 @@ const { OAuth2Client } = require("google-auth-library");
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const User = require('../models/User');
+const generateSixDigits = require('../util/generateSixDigits');
+const { sendForgotPassword } = require('../util/sendEmail');
 
 function validateEmail(email) {
     const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -150,7 +152,7 @@ router.post('/', async (req, res) => {
         const { username, password } = req.body;
         let user;
         if (username.includes("@")) {
-            user = await User.findOne({email: username});
+            user = await User.findOne({email: username.trim().toLowerCase()});
         } else {
             user = await User.findOne({username});
         }
@@ -221,6 +223,182 @@ router.post('/changepassword', authToken, async (req, res) => {
         console.error('Decryption Error:', err);
     }
 });
+
+router.post('/forgotpassword/requestcode', async (req, res) => {
+    try {
+        const {email} = req.body;
+        
+        const account = await User.findOne({email: email.trim().toLowerCase()});
+        if (!account) {
+            return res.json({
+                status: "error",
+                message: "No account with provided email",
+            });
+        }
+        const time = Date.now();
+        if (time - account.forgotPassword.lastSent < (1000 * 60)) {
+            // If the time between is less than 60 seconds for cooldown
+            console.log(time);
+            console.log(account.forgotPassword.lastSent)
+            console.log(time - account.forgotPassword.lastSent)
+            console.log(1000 * 60)
+            return res.json({
+                status: "error",
+                message: "Please wait 60 seconds between requests.",
+            });
+        }
+        if (!account.forgotPassword) account.forgotPassword = {};
+        const code = generateSixDigits()
+        account.forgotPassword.code = code;
+        account.forgotPassword.lastSent = time;
+        account.markModified('forgotPassword');
+        account.save();
+
+        // Email the code
+        console.log("Requesting email code for: " + email);
+        await sendForgotPassword(email, account.username, code);
+
+        res.json({
+            status: "success",
+
+        });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/forgotpassword/requestresendcode', async (req, res) => {
+    try {
+        const {email} = req.body;
+        
+        const account = await User.findOne({email: email.trim().toLowerCase()});
+        if (!account) {
+            return res.json({
+                status: "error",
+                message: "No account with provided email",
+            });
+        }
+        const time = Date.now();
+        if (time - account.forgotPassword.lastSent < (1000 * 60)) {
+            // If the time between is less than 60 seconds for cooldown
+            return res.json({
+                status: "error",
+                message: "Please wait 60 seconds between requests.",
+            });
+        }
+        if (!account.forgotPassword) account.forgotPassword = {};
+        const code = generateSixDigits()
+        account.forgotPassword.code = code;
+        account.forgotPassword.lastSent = time;
+        account.markModified('forgotPassword');
+        account.save();
+
+        // Email the code
+        console.log("Requesting email resend code for: " + email);
+        await sendForgotPassword(email, account.username, code);
+
+        res.json({
+            status: "success",
+
+        });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/forgotpassword/verifycode', async (req, res) => {
+    try {
+        const {email, code} = req.body;
+        const account = await User.findOne({email: email.trim().toLowerCase()});
+        if (!account) {
+            return res.json({
+                status: "error",
+                message: "No account with provided email",
+            });
+        }
+        const time = Date.now();
+        if (time - account.forgotPassword.lastSent > (1000 * 60 * 10)) {
+            // If the time is greated than 10 minutes, dont verify. Expired.
+            return res.json({
+                status: "error",
+                message: "Your code has expired. Please send a new one and try again.",
+            });
+        }
+
+        // Verify code
+        if (!account.forgotPassword) return res.json({status: "error", message: "Account code info not found."});
+        if (code === account.forgotPassword.code) {
+            // Success
+            // Extend code expiration
+            account.forgotPassword.lastSent = time;
+            account.markModified('forgotPassword');
+            await account.save();
+            return res.json({
+                status: "success",
+
+            });
+        }
+
+        res.json({
+            status: "error",
+            message: "Error verifying code.",
+        })
+
+        
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/forgotpassword/resetpassword', async (req, res) => {
+    try {
+        const {email, code, password} = req.body;
+        const account = await User.findOne({email: email.trim().toLowerCase()});
+        if (!account) {
+            return res.json({
+                status: "error",
+                message: "No account with provided email",
+            });
+        }
+        const time = Date.now();
+        if (time - account.forgotPassword.lastSent > (1000 * 60 * 10)) {
+            // If the time is greated than 10 minutes, dont verify. Expired.
+            return res.json({
+                status: "error",
+                message: "Your code has expired. Please send a new one and try again.",
+            });
+        }
+
+        // Verify code
+        if (!account.forgotPassword) return res.json({status: "error", message: "Account code info not found."});
+        if (code === account.forgotPassword.code) {
+            // Success, reset password
+            if (!validatePass(password)) return res.json({status: 'error', message: 'Password must be at least 8 characters long'});
+            const hashedPassword = await bcrypt.hash(password, 10);
+            account.password = hashedPassword;
+            await account.save();
+            return res.json({
+                status: "success",
+
+            });
+        }
+
+        res.json({
+            status: "error",
+            message: "Error verifying code.",
+        })
+
+        
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+
 
 
 module.exports = router;

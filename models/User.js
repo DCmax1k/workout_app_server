@@ -21,10 +21,19 @@ const UserSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
+        lowercase: true,
+        trim: true,
     },
-    verifyEmailCode: {
-        type: "String",
+    verifyEmailCode: { // not local
+        type: String,
         default: '',
+    },
+    forgotPassword: { // not local
+        type: Object,
+        default: {
+            code: "",
+            lastSent: Date.now,
+        }
     },
     dateJoined: {
         type: Date,
