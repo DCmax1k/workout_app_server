@@ -169,9 +169,17 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
         <div style={{padding: 10, marginBottom: 5, cursor: "pointer", width: "100%", fontSize: "1.4vh"}}>
           All Users:
         </div>
-        {searchUsers(searchValue, users).map(person => (
-          <div onClick={() => clickedPerson(person)} key={person._id} style={{padding: 10, borderTop: "2px solid grey", marginBottom: 5, cursor: "pointer", width: "100%", fontSize: "2vh" }}>
-            {person.username}
+        {searchUsers(searchValue, users).sort((a, b) => a.dateJoined - b.dateJoined).map((person, i) => (
+          <div onClick={() => clickedPerson(person)} key={person._id} style={{padding: 10, borderTop: "2px solid grey", marginBottom: 5, cursor: "pointer", width: "100%", fontSize: "2vh", display: "flex", flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <div style={{height: 40, width: 40, borderRadius: 9999, overflow: 'hidden', position: "relative"}}>
+              <img style={{height: "100%", width: "100%", objectFit: "contain"}} src={person.profileImg.url} alt='profile img' />
+              <div style={{position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: "#00000080", display: "flex", justifyContent: "center", alignItems: "center", color: "white", textShadow: "0 0 3px black"}}>
+                {1+i}
+              </div>
+              
+            </div>
+            
+            <p>{person.username}</p>
           </div>
         ))}
       </div>
