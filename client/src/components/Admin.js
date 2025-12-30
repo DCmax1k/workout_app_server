@@ -179,7 +179,7 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
               
             </div>
             
-            <p>{person.username}</p>
+            <p style={{color: person.premium ? "#94A7F3" : "white"}}>{person.username}</p>
           </div>
         ))}
       </div>
