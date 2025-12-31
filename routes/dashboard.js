@@ -798,4 +798,18 @@ router.post('/saveexercise', authToken, async (req, res) => {
     }
 });
 
+router.post('/setpreference', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {key, value} = req.body;
+        user.extraDetails.preferences[key] = value;
+        user.markModified("extraDetails");
+        await user.save();
+        res.json({status: "success",});
+    } catch(err) {
+        console.error(err);
+    }
+})
+
 module.exports = router;
