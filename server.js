@@ -314,8 +314,8 @@ app.get("/setusers", authToken, async (req, res) => {
                 $set: { 
                     "extraDetails.preferences": 
                     {
-                        heightUnit: "feet", // feet, cm
                         liftUnit: "imperial", // metric, imperial
+                        heightUnit: "imperial", // feet, cm
                         distanceUnit: "imperial", // metric, imperial
 
                         // Theme

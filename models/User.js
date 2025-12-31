@@ -97,7 +97,7 @@ const UserSchema = new mongoose.Schema({
                 }
             },
             preferences: {
-                heightUnit: "feet", // feet, cm
+                heightUnit: "imperial", // feet, cm
                 liftUnit: "imperial", // metric, imperial
                 distanceUnit: "imperial", // metric, imperial
 
