@@ -95,7 +95,22 @@ const UserSchema = new mongoose.Schema({
                     credits: 30,
                     lastReset: Date.now(),
                 }
-            }
+            },
+            preferences: {
+                heightUnit: "feet", // feet, cm
+                liftUnit: "imperial", // metric, imperial
+                distanceUnit: "imperial", // metric, imperial
+
+                // Theme
+                systemTheme: "dark", // light, dark, system
+
+                // Workouts
+                restTimerAmount: 120, // seconds. 0 counts up 
+
+                // Sharing
+                workouts: true,
+                // .......
+            },
         },
 
     },

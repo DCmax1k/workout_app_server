@@ -302,6 +302,46 @@ app.post('/auth', authToken, async (req, res) => {
     }
 });
 
+app.get("/setusers", authToken, async (req, res) => {
+    try {
+        const admin = await User.findById(req.userId);
+        if (!admin || admin.rank !== "admin") return res.json({ status: "error" });
+
+        // Update all users: set user.extraDetails.preferences to some value
+        const result = await User.updateMany(
+            {}, // Empty filter means "select all documents"
+            { 
+                $set: { 
+                    "extraDetails.preferences": 
+                    {
+                        heightUnit: "feet", // feet, cm
+                        liftUnit: "imperial", // metric, imperial
+                        distanceUnit: "imperial", // metric, imperial
+
+                        // Theme
+                        systemTheme: "dark", // light, dark, system
+
+                        // Workouts
+                        restTimerAmount: 120, // seconds. 0 counts up 
+
+                        // Sharing
+                        workouts: true,
+                        // .......
+                    },
+                } 
+            }
+        );
+
+        res.json({
+            status: "ok",
+            message: `Updated ${result.modifiedCount} users.`
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: "error", message: "Internal Server Error" });
+    }
+});
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
     console.log('Connected to MongoDB');
