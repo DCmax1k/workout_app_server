@@ -10,6 +10,7 @@ const deepMerge = require('../util/deepMerge');
 const getUserInfo = require('../util/getUserInfo');
 const findInsertIndex = require('../util/findInsertIndex');
 const getDateKey = require('../util/getDateKey');
+const confirmActivityPreferences = require('../util/confirmActivityPrefs');
 
 function validateUsername(username) {
     if (username === 'YOU') return "Username cannot be 'YOU'";
@@ -170,6 +171,9 @@ router.post('/requestactivity', authToken, async (req, res) => {
         const userFriends = user.friends;
         const people = [...userFriends, req.userId];
 
+        // Check activity preferences
+        const checkPrefs = confirmActivityPreferences(user.extraDetails.preferences, activityData.type);
+        if (!checkPrefs) return res.json({status: "success", reject: true});
         let showAchievement = activityData.type === "complete_workout_achievement";
         // if an achievement one, check if already posted
         // Check if already notified users of this activity - need only for certain details objects
@@ -215,7 +219,7 @@ router.post('/requestactivity', authToken, async (req, res) => {
             allPeopleDetails[pId] = pInfo;
         }));
 
-        return res.json({status: "success", activity: {...act, peopleDetails}});
+        return res.json({status: "success", activity: {...act, peopleDetails},});
 
     } catch(err) {
         console.error(err);

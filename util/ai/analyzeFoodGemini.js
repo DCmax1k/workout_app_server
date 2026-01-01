@@ -24,7 +24,7 @@ const analyzeFoodGemini = async ({ imageBase64, userPrompt }) => {
               type: "STRING", 
               enum: ["unit", "units", "slice", "slices", "cup", "cups", "oz", "tbsp", "tsp", "medium", "bars", "pieces", "cans"] 
             },
-            color: { type: "STRING", description: "A hex color code representing the food item" },
+            color: { type: "STRING", description: "A hex color code representing the food item (e.g., #FFA500). Do not use 'unknown'.", },
             nutrition: {
               type: "OBJECT",
               properties: {
