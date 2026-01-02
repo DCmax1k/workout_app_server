@@ -178,7 +178,14 @@ router.post('/requestactivity', authToken, async (req, res) => {
         // if an achievement one, check if already posted
         // Check if already notified users of this activity - need only for certain details objects
         if (showAchievement) {
+            // Check if prefs say acheivement and no workout
+            if (!user.extraDetails.preferences.workouts) {
+                console.log("setting to null");
+                activityData.details.workout = null;
+            }
+
             if (user.streak.achievementAmount < activityData.details.totalWorkouts) {
+                console.log("Setting streak amount");
                 user.streak.achievementAmount = activityData.details.totalWorkouts
                 await user.save();
             }

@@ -13,7 +13,7 @@ IDENTIFICATION & QUANTITY LOGIC:
 CORE CALCULATION PROTOCOL:
 - Step A: Identify the "Unit" (e.g., 1 slice, 1 piece, 1 can).
 - Step B: Estimate nutrition for exactly ONE of that unit.
-- Step C: Determine "Consumption Quantity." If it's a grocery/bulk pack, default to 1. If it's a prepared meal, count the items.
+- Step C: Determine "Consumption Quantity." If it's a grocery/bulk pack, default to 1. If it's a prepared meal, count the items. If its given they ate half, put 0.5, yet still calcualte nutrition values for a full 1 quantity.
 
 COLOR ASSIGNMENT RULE:
 - Every food item MUST have a valid Hex Color Code.
@@ -36,22 +36,27 @@ const FOOD_TEXT_INSTRUCTIONS = `
 You are a professional nutrition analysis assistant. You are tasked with "Normalizing" food data.
 
 NORMALIZATION LOGIC:
-1. Extract the total number of items mentioned (e.g., "15"). This is the "quantity".
-2. Choose the unit (e.g., "pieces").
-3. Provide the nutrition for a SINGLE (1) unit. 
-4. **DO NOT AGGREGATE:** If you provide nutrition for the total amount, or if you change the quantity to 1 to match a total, you have failed the task.
+1. **Determine the Base Unit:** Identify the standard single unit of the food (e.g., 1 piece, 1 brownie, 1 ounce, 1 cookie).
+2. **Extract Quantity:** Identify how much the user ate relative to that single unit.
+   - If the user ate a whole number (e.g., "3 cookies"), quantity is 3.
+   - If the user ate a portion (e.g., "half a brownie"), quantity is 0.5.
+3. **Calculate Per-Unit Nutrition:** Provide nutrition values for exactly **ONE (1)** of the base units identified in step 1. 
+4. **STRICT REQUIREMENT:** Do NOT adjust the nutrition values to match the quantity. The nutrition values must always represent a quantity of 1.0, regardless of what the user actually consumed.
 
 CALCULATION PROOF (Internal Check):
-- Before responding, ask yourself: "If the app multiplies [nutrition.calories] by [quantity], does it equal the total the user ate?"
-- Example: "15 baby carrots" 
-- quantity: 15
-- nutrition.calories: 4
-- Verification: 15 * 4 = 60. This is correct.
+- Ask yourself: "If I multiply [nutrition.calories] by [quantity], does it equal the total the user consumed?"
+- **Example A (Whole Number):** "15 baby carrots" 
+  - quantity: 15
+  - nutrition.calories: 4 (calories in ONE carrot)
+  - Verification: 15 * 4 = 60.
+- **Example B (Fractional):** "half of a brownie"
+  - quantity: 0.5
+  - nutrition.calories: 200 (calories in ONE WHOLE brownie)
+  - Verification: 0.5 * 200 = 100.
 
 DATA INTEGRITY:
-- If the user says "15 baby carrots", and you return quantity: 1 and calories: 60, you are WRONG.
-- If the user says "15 baby carrots", and you return quantity: 15 and calories: 60, you are WRONG.
-- You MUST return quantity: 15 and calories: 4.
+- If the user says "half a brownie" (total 200 cal/full piece), and you return quantity: 0.5 and calories: 100, you are **WRONG**.
+- You MUST return quantity: 0.5 and calories: 200.
 `;
 
 const instructions = {

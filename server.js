@@ -326,6 +326,7 @@ app.get("/setusers", authToken, async (req, res) => {
 
                         // Sharing
                         workouts: true,
+                        achievements: true,
                         // .......
                     },
                 } 
