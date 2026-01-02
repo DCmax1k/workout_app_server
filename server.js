@@ -290,7 +290,7 @@ app.post('/auth', authToken, async (req, res) => {
         //return res.json({status: 'error', message: "Testing error message that is super long to test the alert notification that I made yesterday!"});
         const fullLocalUser = {recentActivity, ...user};
         //console.log("Returning full local user");
-
+        console.log('successfully returning');
         return res.json({
             status: 'success',
             userInfo, 
