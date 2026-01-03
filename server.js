@@ -289,8 +289,7 @@ app.post('/auth', authToken, async (req, res) => {
         //await new Promise(resolve => setTimeout(resolve, 5000));
         //return res.json({status: 'error', message: "Testing error message that is super long to test the alert notification that I made yesterday!"});
         const fullLocalUser = {recentActivity, ...user};
-        //console.log("Returning full local user");
-        console.log('successfully returning');
+        // console.log('successfully returning');
         return res.json({
             status: 'success',
             userInfo, 
@@ -308,30 +307,9 @@ app.get("/setusers", authToken, async (req, res) => {
         if (!admin || admin.rank !== "admin") return res.json({ status: "error" });
 
         // Update all users: set user.extraDetails.preferences to some value
-        const result = await User.updateMany(
-            {}, // Empty filter means "select all documents"
-            { 
-                $set: { 
-                    "extraDetails.preferences": 
-                    {
-                        liftUnit: "imperial", // metric, imperial
-                        heightUnit: "imperial", // feet, cm
-                        distanceUnit: "imperial", // metric, imperial
-
-                        // Theme
-                        systemTheme: "dark", // light, dark, system
-
-                        // Workouts
-                        restTimerAmount: 120, // seconds. 0 counts up 
-
-                        // Sharing
-                        workouts: true,
-                        achievements: true,
-                        // .......
-                    },
-                } 
-            }
-        );
+        // const result = await User.updateMany(
+            
+        // );
 
         res.json({
             status: "ok",
