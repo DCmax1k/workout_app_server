@@ -5,6 +5,8 @@ const User = require('../models/User');
 const getUserInfo = require('../util/getUserInfo');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const Support = require('../models/Support');
+const { sendMessageConfirmation } = require('../util/sendEmail');
 
 // Check auth initially
 router.post('/', authToken, async (req, res) => {
@@ -17,13 +19,16 @@ router.post('/', authToken, async (req, res) => {
             });
         }
         const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1, extraDetails: 1 });
-        
+        const supportTickets = await Support.find({})
+            .sort({ timestamp: -1 })
+            .limit(50);
 
 
         return res.json({
             status: 'success',
             user: {...getUserInfo(user)},
             users,
+            supportTickets,
         });
 
     } catch(err) {
@@ -65,11 +70,15 @@ router.post('/login', async (req, res) => {
         res.cookie('auth-token', token, {expires: new Date(Date.now() + 20 * 365 *  24 * 60 * 60 * 1000) });
 
         const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1, extraDetails: 1 });
-
+        const supportTickets = await Support.find({})
+            .sort({ timestamp: -1 })
+            .limit(50);
+        
         return res.json({
             status: 'success',
             user: {...getUserInfo(user)},
             users,
+            supportTickets,
         });
     } catch(err) {
         console.error(err);
@@ -257,7 +266,86 @@ router.post("/deleteaccount", authToken, async (req, res) => {
     } catch(err) {
         console.error(err);
     }
-})
+});
+
+router.post("/contactsupport", async (req, res) => {
+    try {
+        const {type, userId, username, email} = req.body;
+        switch (type) {
+            case "generalsupport": {
+                const {subject, message} = req.body.data;
+                const newSupport = new Support({
+                    userId,
+                    email,
+                    type,
+                    data: {subject, message},
+                });
+                await newSupport.save();
+                // Send email to person letting them know we received their ticket
+                if (email) {
+                    sendMessageConfirmation(email, username ?? "User");
+                }
+                
+                break;
+            }
+            case "reportabug": {
+                const {subject, message} = req.body.data;
+                const newSupport = new Support({
+                    userId,
+                    email,
+                    type,
+                    data: {subject, message},
+                });
+                await newSupport.save();
+                // Send email to person letting them know we received their ticket
+                if (email) {
+                    sendMessageConfirmation(email, username ?? "User");
+                }
+                break;
+            }
+            case "requestfeature": {
+                const {subject, message} = req.body.data;
+                const newSupport = new Support({
+                    userId,
+                    email,
+                    type,
+                    data: {subject, message},
+                });
+                await newSupport.save();
+                // Send email to person letting them know we received their ticket
+                if (email) {
+                    sendMessageConfirmation(email, username ?? "User");
+                }
+                break;
+            }
+        }
+
+        return res.json({status: "success"});
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post("/dismissticket", authToken, async (req, res) => {
+    try {
+        const admin = await User.findById(req.userId);
+        if (admin.rank !== 'admin') {
+            return res.json({
+                status: 'error',
+                message: 'Not admin.',
+            });
+        } 
+        const {ticketId, value } = req.body;
+        const ticket = await Support.findById(ticketId);
+        ticket.dismissed = value;
+        await ticket.save();
+        return res.json({
+            status: "success",
+        })
+    } catch(err) {
+        console.error(err);
+    }
+});
 
 
 module.exports = router;

@@ -120,37 +120,6 @@ router.post('/createaccount', async (req, res) => {
     }
 });
 
-// TESTIONG
-router.get("/loginthirdparty", async (req, res) => {
-    // const { partyType, idToken, username, email, password} = req.body;
-    const partyType = "google";
-    const idToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjRiYTZlZmVmNWUxNzIxNDk5NzFhMmQzYWJiNWYzMzJlMGY3ODcxNjUiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI0ODM2MjQ2NDYxNjQtMjI5MWQwbjlmZWJ0M2tmOHUzMHM4NGtpaHVkbzl2bWMuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI0ODM2MjQ2NDYxNjQtN2NrbjQxbGpvYmgycDdjdjRpZzNuaTRoZzFzNmU3N28uYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDI5MDExNDQ1NTkyODQwNTU5NjEiLCJlbWFpbCI6ImRpZ2l0YWxjYWxkd2VsbDM1QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiRGlnaXRhbGNhbGR3ZWxsIiwicGljdHVyZSI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL0FDZzhvY0tpUGVFeFR1X2lGM2dIQXBvUXFyQnA3SE5YNXg4YWg3M3pyWVNiOW0zb21id1RRZz1zOTYtYyIsImdpdmVuX25hbWUiOiJEaWdpdGFsY2FsZHdlbGwiLCJpYXQiOjE3NjczOTQzMTMsImV4cCI6MTc2NzM5NzkxM30.bZ7YbD7nj5cw4OIxajNio2gq_cklDLJhwlM941rtpRr0tia-WTvuTSlW7WuEtLp8eOsNw-01UnNZyeoP4AYt9oHULnQ-lE-GOYjJKzkvgymtvZh_Lh2AG44PhaHcum8z52RNvSRhg6rheB7jyvv9Q1r-bk6GfDrlgUtNk7GfDvOApq_ldNpeAmE5csrsD-lVz49AOciKx9vmIR1-TxWGgttHs8p1bOhmHLwS3XoFzGH6Pdj-kuzieLkdaxccDK5kYBY-kaumfv32wOGtX_j7qN3tdvtiR_58a7YmUgdplxxwo5tthvQR01zo6xxhlnFNPKtAjfJbsiHDH4Vl4fIViQ";
-    let user;
-    if (!partyType) {
-        return res.json({status: 'error', message: "Party type not available"});
-    } else if (partyType === "google") {
-        // Verify google session idToken
-        const ticket = await googleClient.verifyIdToken({
-            idToken,
-            audience: process.env.GOOGLE_CLIENT_ID,
-        });
-        const { sub, email } = ticket.getPayload();
-        // console.log("Party google, id: ", idToken);
-        console.log("Party google, sub: ", sub);
-        user = await User.findOne({googleId: sub})
-    } else if (partyType === "apple") {
-        //user = await User.findOne({appleId: idToken})
-    } else {
-        console.log("Err: Party type not google or apple")
-    }
-
-    console.log("USER", user.username);
-    if (!user) return res.json({status: "success", userFound: false});
-
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
-    if (user) return res.json({status: "success", userFound: true, jsonWebToken: token});
-})
-
 router.post("/loginthirdparty", async (req, res) => {
     const { partyType, idToken, username, email, password} = req.body;
     let user;

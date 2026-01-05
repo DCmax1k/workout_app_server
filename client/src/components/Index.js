@@ -24,7 +24,7 @@ const Index = () => {
           <a className='viewProject' href='https://github.com/DCmax1k/workout_app' target='_blank' rel="noreferrer" >View Project</a>
 
           <div>
-            <p className='comingSoon'>Coming soon</p>
+            <p className='comingSoon'>Beta</p>
           </div>
           
         </div>

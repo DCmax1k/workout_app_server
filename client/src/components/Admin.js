@@ -13,7 +13,7 @@ const searchUsers = (search="", users=[]) => {
 }
 
 // Logged in
-const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
+const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupportTickets, ...props}) => {
   const navigate = useNavigate();
 
   const [searchValue, setSearchValue] = useState("");
@@ -21,6 +21,8 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
   const [prefixValue, setPrefixValue] = useState("");
   const [prefixColorValue, setPrefixColorValue] = useState("");
   const [passwordValue, setPasswordValue] = useState("");
+
+  const [page, setPage] = useState(0); // 0 users, 1 support tickets
   
 
   const [editPerson, setEditPerson] = useState(null);
@@ -121,13 +123,28 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
       deleteAccount();
     }
   }
+
+  const setDismiss = async (value, ticketId) => {
+    const response = await sendData("/admin/dismissticket", {ticketId, value});
+    if (response.status !== "success") {
+      console.log(response.message);
+      return;
+    }
+    const newTickets = supportTickets.map(ticket => {
+      if (ticket._id === ticketId) {
+        return {...ticket, dismissed: value};
+      }
+      return ticket;
+    });
+    setSupportTickets(newTickets);
+  }
  
 
   return (
     <div className='Admin' style={{width: "100%"}} {...props}>
 
       {editPerson && (
-        <div style={{position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", padding: "2vh", display: "flex", flexDirection: "column", minHeight: 300, width: 200, backgroundColor: "#3f3f3fff", cursor: "pointer"}}>
+        <div style={{position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", padding: "2vh", display: "flex", flexDirection: "column", minHeight: 300, width: 200, backgroundColor: "#3f3f3fff", cursor: "pointer", zIndex: 5}}>
           <button onClick={() => setEditPerson(null)}>close</button>
           <div style={{marginTop: '1vh'}}></div>
           <h2>{editPerson.username}</h2>
@@ -164,25 +181,65 @@ const LoggedInAdmin = ({style, user, users, setUsers, ...props}) => {
       <div className='button' onClick={() => navigate('/dashboard')} style={{marginTop: 5, marginBottom: 5}}>
           Go to Dashboard
       </div>
-      <input value={searchValue} onInput={(e) => setSearchValue(e.target.value)} />
-      <div style={{backgroundColor: "#444444ff", borderRadius: "1vh", padding: "2vh", width: "80%", marginTop: 20 }}>
-        <div style={{padding: 10, marginBottom: 5, cursor: "pointer", width: "100%", fontSize: "1.4vh"}}>
-          All Users:
+      
+      <input value={searchValue} onInput={(e) => setSearchValue(e.target.value)} style={{outline: "none", border: "none", backgroundColor: "#b4b4b4ff", padding: 5, borderRadius: 5}} placeholder='Search user' />
+      
+      {page === 0 ? (
+        <div className='button' onClick={() => {setPage(1)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+          New Support Tickets: {supportTickets.filter(t => !t.dismissed).length}
         </div>
-        {searchUsers(searchValue, users).sort((a, b) => a.dateJoined - b.dateJoined).map((person, i) => (
-          <div onClick={() => clickedPerson(person)} key={person._id} style={{padding: 10, borderTop: "2px solid grey", marginBottom: 5, cursor: "pointer", width: "100%", fontSize: "2vh", display: "flex", flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <div style={{height: 40, width: 40, borderRadius: 9999, overflow: 'hidden', position: "relative"}}>
-              <img style={{height: "100%", width: "100%", objectFit: "contain"}} src={person.profileImg.url} alt='profile img' />
-              <div style={{position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: "#00000080", display: "flex", justifyContent: "center", alignItems: "center", color: "white", textShadow: "0 0 3px black"}}>
-                {1+i}
-              </div>
-              
+      ) : page === 1 ? (
+        <div className='button' onClick={() => {setPage(0)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+            Show Users: {users.length}
+        </div>
+      ) : null}
+      
+      {page === 0 ? (
+        <div className='scrollview' style={{backgroundColor: "#444444ff", borderRadius: "1vh", padding: "2vh", marginTop: 10 }}>
+            <div style={{padding: 10, marginBottom: 5, cursor: "pointer", width: "100%", fontSize: "1.4vh"}}>
+              All Users:
             </div>
-            
-            <p style={{color: person.premium ? "#94A7F3" : "white"}}>{person.username}</p>
-          </div>
-        ))}
-      </div>
+            {searchUsers(searchValue, users).sort((a, b) => a.dateJoined - b.dateJoined).map((person, i) => (
+              <div onClick={() => clickedPerson(person)} key={person._id} style={{padding: 10, borderTop: "2px solid grey", marginBottom: 5, cursor: "pointer", width: "100%", fontSize: "2vh", display: "flex", flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <div style={{height: 40, width: 40, borderRadius: 9999, overflow: 'hidden', position: "relative"}}>
+                  <img style={{height: "100%", width: "100%", objectFit: "contain"}} src={person.profileImg.url ?? "/images/icons/profileIcon.png"} alt='profile img' />
+                  <div style={{position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: "#00000080", display: "flex", justifyContent: "center", alignItems: "center", color: "white", textShadow: "0 0 3px black"}}>
+                    {1+i}
+                  </div>
+                  
+                </div>
+                
+                <p style={{color: person.premium ? "#94A7F3" : "white"}}>{person.username}</p>
+              </div>
+            ))}
+        </div>
+      ) : page === 1 ? (
+        <div className='scrollview' style={{backgroundColor: "#444444ff", borderRadius: "1vh", padding: "2vh", marginTop: 10 }}>
+            <div style={{padding: 10, marginBottom: 5, width: "100%", fontSize: "1.4vh"}}>
+              All Support Tickets:
+            </div>
+            {supportTickets.map((ticket, i) => {
+              const backgroundColor = ticket.dismissed ? "transparent" : ticket.type === "reportabug" ? "#DB545680" : ticket.type === 'requestfeature' ? "#B660BA80" : ticket.type === 'generalsupport' ? "#2ee36a80" : "transparent";
+              const title = ticket.type === "reportabug" ? "Reported Bug" : ticket.type === 'requestfeature' ? "Feature Idea" : ticket.type === 'generalsupport' ? "General Support" : "transparent";
+              let user = {username: "user"};
+              if (ticket.userId) {
+                user = users.find(u => u._id === ticket.userId);
+              }
+              return (
+                <div key={ticket._id} style={{padding: 10, borderTop: "2px solid grey", marginBottom: 5, width: "100%", fontSize: "2vh", display: "flex", flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <div style={{padding: 20, borderRadius: 10, display: "flex", flexDirection: "column", width: "100%", gap: 5, backgroundColor}}>
+                    <p style={{fontSize: 15,}}>{title}</p>
+                    <p style={{fontSize: 20,}}>{ticket.data.subject}</p>
+                    <p style={{fontSize: 12, fontWeight: "300",}}>{ticket.data.message}</p>
+                    <p style={{fontSize: 12, fontWeight: "300",}}>Post by: {user.username}</p>
+                    <p style={{fontSize: 12, fontWeight: "300",}}>{new Date(ticket.timestamp).toLocaleDateString()}</p>
+                    <button onClick={() => {setDismiss(!ticket.dismissed, ticket._id)}} style={{width: 100}}>{ticket.dismissed ? "Undismiss" : "Dismiss"}</button>
+                  </div>
+                </div>
+              )
+            })}
+        </div>
+      ) : null}
       
     </div>
   )
@@ -195,6 +252,7 @@ const Admin = () => {
 
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState(null);
+  const [supportTickets, setSupportTickets] = useState([]);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -202,6 +260,7 @@ const Admin = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const checkAuth = async () => {
+      //const response = { "status": "success", "user": { "_id": "690eaddde44f134e30e11257", "username": "test", "usernameDecoration": { "prefix": "", "prefixColor": "#000000", "description": "Or description here" }, "profileImg": { "url": "https://res.cloudinary.com/dxpmmy0ig/image/upload/v1765248986/profileImages/tpumbvjyhxxfhbnsn8jk.jpg", "public_id": "profileImages/tpumbvjyhxxfhbnsn8jk" }, "premium": false, "pastWorkoutsLength": 15 }, "users": [ { "profileImg": { "url": "https://res.cloudinary.com/dlqj2rrlv/image/upload/v1741646278/profileImages/v2gdzso0hlhlpqpmcc48.jpg", "public_id": "" }, "_id": "690295af9feed1676b9c407f", "username": "DCmax1k", "verifyEmailCode": "541400", "rank": "user", "premium": true, "friends": [ "690eaddde44f134e30e11257" ], "trouble": { "bans": [], "frozen": false }, "usernameDecoration": { "prefix": "LOCAL", "prefixColor": "#ffe224" }, "extraDetails": { "ai": { "image": { "used": 0, "credits": 6, "lastReset": 1766118872737 } }, "preferences": { "liftUnit": "imperial", "heightUnit": "imperial", "distanceUnit": "imperial", "systemTheme": "dark", "restTimerAmount": 120, "workouts": true, "achievements": true } } }, { "profileImg": { "url": "https://res.cloudinary.com/dxpmmy0ig/image/upload/v1765248986/profileImages/tpumbvjyhxxfhbnsn8jk.jpg", "public_id": "profileImages/tpumbvjyhxxfhbnsn8jk" }, "_id": "690eaddde44f134e30e11257", "username": "test", "verifyEmailCode": "321311", "rank": "admin", "premium": false, "friends": [ "690295af9feed1676b9c407f" ], "trouble": { "bans": [], "frozen": false }, "usernameDecoration": { "prefix": "", "prefixColor": "#000000", "description": "Or description here" }, "extraDetails": { "ai": { "image": { "used": 41, "lastReset": 1764393189879, "credits": 6 }, "foodText": { "credits": 9, "lastReset": 1764393189879, "used": 18 } }, "preferences": { "liftUnit": "imperial", "heightUnit": "imperial", "distanceUnit": "imperial", "systemTheme": "dark", "restTimerAmount": 120, "workouts": false, "achievements": true } } } ], "supportTickets": [ { "_id": "695b08ab6836588399249d3e", "userId": "690295af9feed1676b9c407f", "email": "dylan@digitalcaldwell.com", "type": "generalsupport", "data": { "subject": "Generally speaking", "message": "this is a general message" }, "dismissed": false, "timestamp": "2026-01-05T00:41:15.875Z", "__v": 0 }, { "_id": "695b087a6836588399249d3c", "userId": "690295af9feed1676b9c407f", "email": "dylan@digitalcaldwell.com", "type": "requestfeature", "data": { "subject": "New feature bruh", "message": "Itd be sick if you did this" }, "dismissed": false, "timestamp": "2026-01-05T00:40:26.147Z", "__v": 0 }, { "_id": "695b0808144fa26e27dbb54f", "userId": "690295af9feed1676b9c407f", "email": "dylan@digitalcaldwell.com", "type": "reportabug", "data": { "subject": "Bug / Crash", "message": "This is a bug.\nCrazy bug that happened here" }, "dismissed": false, "timestamp": "2026-01-05T00:38:32.617Z", "__v": 0 } ] }
       const response = await sendData("/admin", {});
       if (response.status !== "success") {
         setErrorMessage(response.message);
@@ -210,6 +269,7 @@ const Admin = () => {
       console.log(response);
       setUsers(response.users);
       setUser(response.user);
+      setSupportTickets(response.supportTickets);
     }
 
   useEffect(() => {
@@ -232,7 +292,7 @@ const Admin = () => {
 
   return user ? (
     // Admin dashboard for user
-    <LoggedInAdmin user={user} users={users} setUsers={setUsers} />
+    <LoggedInAdmin user={user} users={users} setUsers={setUsers} supportTickets={supportTickets} setSupportTickets={setSupportTickets} />
   ) : (
     // Show login for admin
     <div className="Login">

@@ -111,8 +111,24 @@ async function sendForgotPassword(to, username, code) {
     //console.log("Email sent.");
 }
 
+// Received their support message
+async function sendMessageConfirmation(to, username) {
+    await sendEmail(to, 'Pumped Up Support', 
+    `
+            Hi ${username}!
+            <br />
+            <br />
+            Thank you for contacting support, your message has been received. 
+            <br />
+            <br />
+            The Pumped Up Team
+    `);
+    //console.log("Email sent.");
+}
+
 module.exports = {
     sendWelcomeEmail,
     sendForgotPassword,
     sendVerifyEmail,
+    sendMessageConfirmation,
 }

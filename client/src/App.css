@@ -137,6 +137,9 @@ html {
   object-fit: contain;
 }
 
+.Admin * {
+  font-family: Arial, Helvetica, sans-serif;
+}
 .Admin {
   width: '100%';
   display: flex;
@@ -150,6 +153,10 @@ html {
   padding: 5px 10px;
   border-radius: 10px;
 }
+.Admin .scrollview {
+  width: 80%;
+}
+
 
 @media screen and (max-width: 80vh) {
   
@@ -170,6 +177,10 @@ html {
   }
   .index > p {
     text-align: center;
+  }
+
+  .Admin .scrollview {
+    width: 100%;
   }
 
 

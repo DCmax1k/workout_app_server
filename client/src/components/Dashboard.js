@@ -38,7 +38,7 @@ export default function Dashboard() {
     <div className='Dashboard'>
         <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
              <div className='username'>
-                <img src={info.profileImg.url} />
+                <img src={info.profileImg.url ?? "/images/icons/profileIcon.png"} />
                 <h3 style={{color: info.premium ? "#94A7F3" : "white"}}>{info.username}</h3>
             </div>
             {info.rank === 'admin' && (
