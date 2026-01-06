@@ -140,7 +140,6 @@ router.post("/loginthirdparty", async (req, res) => {
     } else {
         console.log("Err: Party type not google or apple")
     }
-    console.log("USER", user.username);
     if (!user) return res.json({status: "success", userFound: false});
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
