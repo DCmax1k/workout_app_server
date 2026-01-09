@@ -1,7 +1,9 @@
 
 const getUserInfo = (user, friend=false) => {
+    const dbId = JSON.parse(JSON.stringify(user._id));
     const obj = {
-        _id: JSON.parse(JSON.stringify(user._id)),
+        _id: dbId,
+        dbId,
         username: user.username,
         usernameDecoration: user.usernameDecoration,
         profileImg: user.profileImg,

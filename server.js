@@ -322,6 +322,10 @@ app.get("/setusers", authToken, async (req, res) => {
     }
 });
 
+app.post("/checkping", (req, res) => {
+    return res.json({status: "success"});
+})
+
 mongoose.connect(process.env.MONGODB_URI).then(() => {
     console.log('Connected to MongoDB');
     const server = app.listen(process.env.PORT || 3003, () => {
