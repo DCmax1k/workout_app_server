@@ -51,7 +51,7 @@ router.post("/checkusername", async (req, res) => {
         return res.json({status: 'error', message: 'Username already taken'});
     }
     const vUsername = validateUsername(username);
-    if (vUsername !== 'success') return {status: 'error', message: vUsername};
+    if (vUsername !== 'success') return res.json({status: 'error', message: vUsername});
     return res.json({
         status: "success",
     });
