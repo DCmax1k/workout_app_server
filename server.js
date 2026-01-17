@@ -128,6 +128,70 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
   res.sendStatus(200);
 });
 
+app.post("/revenuecat-webhook", express.json(), async (req, res) => {
+    // 1. Security: Check the Authorization header
+    // You set this 'Auth Header' string in your RevenueCat Dashboard -> Integrations -> Webhooks
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== `Bearer ${process.env.REVENUECAT_WEBHOOK_AUTH_TOKEN}`) {
+        return res.status(401).send("Unauthorized");
+    }
+
+    const { event } = req.body;
+    const eventType = event.type;
+    const appUserId = event.app_user_id; // This is the ID you pass to RC in your frontend
+    const productId = event.product_id;
+
+    try {
+        const user = await User.findById(appUserId);
+        if (!user) {
+            console.log(`User ${appUserId} not found in DB`);
+            return res.sendStatus(200); // Return 200 so RC doesn't retry infinitely
+        }
+
+        switch (eventType) {
+            case 'INITIAL_PURCHASE':
+            case 'RENEWAL':
+                // Grant or refresh access
+                console.log(`Granting access: ${eventType} for ${user.username}`);
+                
+                user.premium = true;
+                if (!user.premiumSubscription) {
+                    user.premiumSubscription = {...user.premiumSubscription, service: "revenuecat", };
+                }
+                
+                user.premiumSubscription.service = 'revenuecat';
+                // Store store-specific info if you want (e.g., event.store)
+                user.markModified("premiumSubscription");
+                await user.save();
+                break;
+
+            case 'EXPIRATION':
+                // Access lost (either cancelled and time ran out, or billing failed)
+                console.log(`Removing access: ${eventType} for ${user.username}`);
+                
+                user.premium = false;
+                user.markModified("premium");
+                await user.save();
+                break;
+
+            case 'CANCELLATION':
+                // Note: RevenueCat sends CANCELLATION when a user turns off auto-renew.
+                // They usually STILL HAVE ACCESS until the EXPIRATION event fires.
+                // Most devs just log this and wait for 'EXPIRATION' to actually revoke access.
+                console.log(`User ${user.username} turned off auto-renew.`);
+                break;
+
+            default:
+                console.log(`Unhandled RevenueCat event: ${eventType}`);
+        }
+
+        res.sendStatus(200);
+    } catch (err) {
+        console.error("RevenueCat Webhook Error:", err);
+        res.sendStatus(500);
+    }
+});
+
 
 app.use(express.json({limit: '50mb'}));
 
