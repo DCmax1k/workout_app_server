@@ -164,8 +164,11 @@ app.post("/revenuecat-webhook", express.json(), async (req, res) => {
                 user.markModified("premiumSubscription");
                 await user.save();
 
-                //notify owner
-                sendOwnerNotification(user.username);
+                if (eventType === 'INITIAL_PURCHASE') {
+                    //notify owner
+                    sendOwnerNotification(user.username);
+                }
+
                 break;
 
             case 'EXPIRATION':
