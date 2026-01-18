@@ -131,6 +131,10 @@ router.post('/editprofile', authToken, async (req, res) => {
                     imageID,
                 });
             case "email":
+                const checkThirdParty = user.googleId || user.appleId || user.facebookId;
+                if (checkThirdParty) {
+                    return res.json({status: 'error', message: 'Cannot change email for third party accounts'});
+                }
                 const checkEmail = await User.findOne({ email: value });
                 if (checkEmail) {
                     return res.json({status: 'error', message: 'Email already taken'});
@@ -673,6 +677,31 @@ router.post('/savemeal', authToken, async (req, res) => {
         }
         user.savedMeals = savedMeals;
         user.markModified("savedMeals");
+        await user.save();
+        
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+router.post('/savemealconsumption', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {meal, dateKey} = req.body;
+
+        const consumedMeals = user.consumedMeals;
+        const dayMeals = consumedMeals[dateKey] || [];
+        const idx = dayMeals.findIndex(m => m.id === meal.id);
+        if (idx < 0) return res.json({status: "error", message: "Meal not found in consumption for that day"});
+        dayMeals[idx] = meal;
+        const newConsumedMeals = {...consumedMeals, [dateKey]: dayMeals};
+        user.consumedMeals = newConsumedMeals;
+
+        user.markModified("consumedMeals");
         await user.save();
         
         

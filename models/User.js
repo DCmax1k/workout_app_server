@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
+    authCount: {
+        type: Number,
+        default: 0,
+    },
     lastOnline: {
         type: Date,
         default: Date.now,
