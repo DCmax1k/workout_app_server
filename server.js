@@ -163,6 +163,9 @@ app.post("/revenuecat-webhook", express.json(), async (req, res) => {
                 // Store store-specific info if you want (e.g., event.store)
                 user.markModified("premiumSubscription");
                 await user.save();
+
+                //notify owner
+                sendOwnerNotification(user.username);
                 break;
 
             case 'EXPIRATION':
@@ -240,6 +243,7 @@ const aiRoute = require('./routes/ai');
 app.use('/ai', aiRoute);
 
 const stripeRoute = require('./routes/stripe');
+const { sendOwnerNotification } = require('./util/sendEmail');
 app.use('/stripe', stripeRoute);
 
 // Get necesasry user info from db when authenticating

@@ -126,9 +126,25 @@ async function sendMessageConfirmation(to, username) {
     //console.log("Email sent.");
 }
 
+// Notify owner of premium subscription purchase
+async function sendOwnerNotification(usersUsername) {
+    await sendEmail("pumpedup@digitalcaldwell.com", 'New Premium Subscription', 
+    `
+            Hi Dylan!
+            <br />
+            <br />
+            ${usersUsername} purhcased a premium subscription.
+            <br />
+            <br />
+            The Pumped Up Team
+    `);
+    //console.log("Email sent.");
+}
+
 module.exports = {
     sendWelcomeEmail,
     sendForgotPassword,
     sendVerifyEmail,
     sendMessageConfirmation,
+    sendOwnerNotification,
 }
