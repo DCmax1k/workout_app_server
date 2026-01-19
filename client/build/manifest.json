@@ -1,9 +1,16 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Pumped Up",
+  "name": "Pumped Up Workouts / Nutrition",
+  "prefer_related_applications": true,
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.caldwell.pumpedup"
+    }
+  ],
   "icons": [
     {
-      "src": "logo192.png",
+      "src": "icon.png",
       "type": "image/png",
       "sizes": "192x192"
     }

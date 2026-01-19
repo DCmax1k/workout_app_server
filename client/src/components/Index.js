@@ -11,7 +11,7 @@ const Index = () => {
           </div>
           <div className='links'>
             <a href='#features'>Features</a>
-            <a href='https://play.google.com/store/apps/details?id=com.caldwell.pumpedup' target='_blank' rel="noreferrer">Download</a>
+            {/* <a href='https://play.google.com/store/apps/details?id=com.caldwell.pumpedup' target='_blank' rel="noreferrer">Download</a> */}
             <a href='/login' className='download'>Account</a>
           </div>
         </div>
@@ -21,11 +21,9 @@ const Index = () => {
           <p className='quicksand'>Track your progress in and out of the gym,</p>
           <p className='quicksand'>using science to achieve your goals!</p>
 
-          <a className='viewProject' href='https://github.com/DCmax1k/workout_app' target='_blank' rel="noreferrer" >View Project</a>
-
-          <div>
-            <p className='comingSoon'>Beta</p>
-          </div>
+          <a className='viewProject' href='https://apps.apple.com/us/app/pumped-up-workouts-nutrition/id6757413833' target='_blank' rel="noreferrer" >Get on IOS</a>
+          <br />
+          <a className='viewProject' href='https://play.google.com/store/apps/details?id=com.caldwell.pumpedup' target='_blank' rel="noreferrer" >Get on Android</a>
           
         </div>
 
