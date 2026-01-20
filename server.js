@@ -395,7 +395,19 @@ app.get("/setusers", authToken, async (req, res) => {
 
 app.post("/checkping", (req, res) => {
     return res.json({status: "success"});
-})
+});
+
+app.get('/health', (req, res) => {
+  // Check if the system is under heavy load
+  const memoryUsage = process.memoryUsage().heapUsed / 1024 / 1024;
+  
+  res.status(200).json({
+    status: 'healthy',
+    memory: `${Math.round(memoryUsage)}MB`,
+    uptime: `${Math.round(process.uptime())}s`
+  });
+});
+
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
     console.log('Connected to MongoDB');
