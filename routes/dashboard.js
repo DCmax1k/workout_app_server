@@ -244,7 +244,7 @@ router.post('/logpastworkout', authToken, async (req, res) => {
         const {data} = req.body;
 
         const pastWorkouts = user.pastWorkouts;
-        pastWorkouts.push(data);
+        pastWorkouts.unshift(data);
         user.pastWorkouts = pastWorkouts;
         user.markModified("pastWorkouts");
         await user.save();
