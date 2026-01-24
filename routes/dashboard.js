@@ -256,6 +256,58 @@ router.post('/logpastworkout', authToken, async (req, res) => {
     }
 });
 
+router.post("/deletepastworkout", authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {data} = req.body;
+        const pastWorkouts = user.pastWorkouts;
+        // Go through each exercise and delete the completed exercise info with the same data as workout
+        const completedExercises = user.completedExercises || {};
+        data.exercises.forEach(exer => {
+            const exTime = exer.date;
+            let completedIndex = completedExercises[exer.id]?.findIndex(ex => ex.date === exTime); 
+            if (completedIndex === -1 || completedIndex === undefined) return;
+            do {
+               completedExercises[exer.id].splice(completedIndex, 1);
+               completedIndex = completedExercises[exer.id].findIndex(ex => ex.date === exTime); 
+            } while (completedIndex > -1)
+        });
+        // Find workout
+        const ind = pastWorkouts.findIndex(w => w.time === data.time);
+
+        // Subtract expenditure data from that day
+        const expenditureData = JSON.parse(JSON.stringify(user.tracking.insights["expenditure"].data));
+        let idx = expenditureData.length - 1;
+        let isSameDay = false; 
+        while (!isSameDay) {
+            isSameDay = new Date(expenditureData[idx]?.date).toDateString() === new Date(pastWorkouts[ind].time).toDateString();
+            if (isSameDay) {
+                const totalExpenditure = pastWorkouts[ind].totalExpenditure || 0;
+                expenditureData[idx].amount = Math.max(0, expenditureData[idx].amount - totalExpenditure);
+                break;
+            }
+            idx--;
+            if (idx < 0) break;
+        }
+        
+        // Slice out to delete
+        pastWorkouts.splice(ind, 1);
+
+        user.pastWorkouts = pastWorkouts;
+        user.tracking.insights["expenditure"].data = expenditureData;
+        user.completedExercises = completedExercises;
+        user.markModified("pastWorkouts");
+        user.markModified("tracking");
+        user.markModified("completedExercises");
+        await user.save();
+        res.json({status: "success"});
+
+    } catch(err) {
+        console.error(err);
+    }
+})
+
 // Add reaction to 
 router.post('/activityreact', authToken, async (req, res) => {
     try {
