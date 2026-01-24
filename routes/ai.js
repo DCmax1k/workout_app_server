@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const analyzeFoodGemini = require('../util/ai/analyzeFoodGemini');
 const analyzeFoodOpenAi = require('../util/ai/analyzeFoodOpenAi');
 const analyzeFoodTextOpenAi = require('../util/ai/analyzeFoodTextOpenAi');
+const analyzeFoodTextGemini = require('../util/ai/analyseFoodTextGemini');
 
 // TESTING ROUTE
 router.get('/testai', (req, res) => {
@@ -133,7 +134,8 @@ router.post("/analyzefoodtext", authToken, async (req, res) => {
     await user.save();
     
     const { userPrompt } = req.body;
-    const analysis = await analyzeFoodTextOpenAi({ userPrompt });
+    // const analysis = await analyzeFoodTextOpenAi({ userPrompt });
+    const analysis = await analyzeFoodTextGemini({ userPrompt });
     console.log("AI text scan by " + user.username + ": " + JSON.stringify(analysis));
 
 

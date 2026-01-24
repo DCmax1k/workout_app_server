@@ -4,8 +4,7 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_KEY ,
 });
 
-const analyzeFoodGemini = async ({ imageBase64, userPrompt }) => {
-  const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+const analyzeFoodTextGemini = async ({ userPrompt }) => {
 
   // Define the schema using your OpenAI structure
   const responseSchema = {
@@ -59,12 +58,6 @@ const analyzeFoodGemini = async ({ imageBase64, userPrompt }) => {
           role: "user",
           parts: [
             { text: userPrompt || "Analyze this food/label." },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: cleanBase64,
-              },
-            },
           ],
         },
       ],
@@ -79,4 +72,4 @@ const analyzeFoodGemini = async ({ imageBase64, userPrompt }) => {
   }
 };
 
-module.exports = analyzeFoodGemini;
+module.exports = analyzeFoodTextGemini;
