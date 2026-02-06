@@ -19,11 +19,11 @@ const analyzeFoodGemini = async ({ imageBase64, userPrompt }) => {
           type: "OBJECT",
           properties: {
             name: { type: "STRING" },
-            quantity: { type: "NUMBER" },
             unit: { 
               type: "STRING", 
               enum: ["unit", "units", "slice", "slices", "cup", "cups", "oz", "tbsp", "tsp", "medium", "bars", "pieces", "cans"] 
             },
+            quantity: { type: "NUMBER" },
             color: { type: "STRING", description: "A hex color code representing the food item (e.g., #FFA500). Do not use 'unknown'.", },
             nutrition: {
               type: "OBJECT",
@@ -71,7 +71,21 @@ const analyzeFoodGemini = async ({ imageBase64, userPrompt }) => {
     });
 
     // Reminder: In this SDK, .text is a property, not a function
-    return JSON.parse(result.text);
+    const rawParse = JSON.parse(result.text);
+    // Divide each nutrition macro value by its quantity to get per-unit values
+    rawParse.foods = rawParse.foods.map(food => {
+      const quantity = food.quantity || 1;
+      return (quantity === 1 || quantity === 0) ? food : {
+        ...food,
+        nutrition: {
+          calories: food.nutrition.calories / quantity,
+          protein: food.nutrition.protein / quantity,
+          carbs: food.nutrition.carbs / quantity,
+          fat: food.nutrition.fat / quantity,
+        }
+      };
+    });
+    return rawParse;
 
   } catch (error) {
     //console.error("Gemini 2.0 Analysis Error:", error.message);
