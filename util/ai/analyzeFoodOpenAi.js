@@ -47,10 +47,8 @@ const analyzeFoodOpenAi = async ({ imageBase64, userPrompt }) => {
                   properties: {
                     name: { type: "string" },
                     quantity: { type: "number" },
-                    unit: {
-                      type: "string",
-                      enum: ["unit", "units", "slice", "slices", "cup", "cups", "oz", "tbsp", "tsp", "medium", "bars", "pieces", "cans"]
-                    },
+                    unit: {type: "string",},
+                    pluralUnit: {type: "string",},
                     color: { 
                       type: "string",
                       description: "A hex color code representing the food item, e.g., #DB8854"
