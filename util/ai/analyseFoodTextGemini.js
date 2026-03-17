@@ -32,7 +32,8 @@ const analyzeFoodTextGemini = async ({ userPrompt }) => {
               },
               required: ["calories", "protein", "carbs", "fat"]
             },
-            description: { type: "STRING" }
+            description: { type: "STRING" },
+            categories: { type: "array", items: { type: "string", enum: ["Breakfast", "Lunch", "Dinner", "Snacks", "Beverages", "Fruits & Vegetables",] } },
           },
           required: ["name", "quantity", "unit", "color", "nutrition", "description"]
         }

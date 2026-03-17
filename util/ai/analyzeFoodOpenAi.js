@@ -64,7 +64,8 @@ const analyzeFoodOpenAi = async ({ imageBase64, userPrompt }) => {
                       required: ["calories", "protein", "carbs", "fat"],
                       additionalProperties: false
                     },
-                    description: { type: "string" }
+                    description: { type: "string" },
+                    categories: { type: "array", items: { type: "string", enum: ["Breakfast", "Lunch", "Dinner", "Snacks", "Beverages", "Fruits & Vegetables",] } },
                   },
                   required: ["name", "quantity", "unit", "color", "nutrition", "description"],
                   additionalProperties: false
