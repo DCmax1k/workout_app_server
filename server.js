@@ -247,6 +247,7 @@ app.use('/ai', aiRoute);
 
 const stripeRoute = require('./routes/stripe');
 const { sendOwnerNotification } = require('./util/sendEmail');
+const sendNotification = require('./util/sendNotification');
 app.use('/stripe', stripeRoute);
 
 // Get necesasry user info from db when authenticating
@@ -408,6 +409,27 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.post('/save-push-token', authToken, async (req, res) => {
+    const { pushToken } = req.body;
+    if (!pushToken) {
+        return res.status(400).json({ status: "error", message: "Push token is required" });
+    }
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ status: "error", message: "User not found" });
+        }
+        user.pushToken = pushToken;
+        await user.save();
+        res.json({ status: "success", message: "Push token saved successfully" });
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).json({ status: "error", message: "Internal Server Error" });
+    }
+});
+
+//sendNotification("ExponentPushToken[odAI9NHMeQD0ZuleqKSefG]", "Test Notification", "This is a test notification from the backend!", "Extra data goes here!");
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
     console.log('Connected to MongoDB');

@@ -9,7 +9,10 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-    
+    pushToken: {
+        type: String,
+        default: "",
+    },
     username: {
         type: String,
         default: "",
