@@ -24,6 +24,7 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
 
   const [page, setPage] = useState(0); // 0 users, 1 support tickets
 
+  const [usernameToConfigure, setUsernameToConfigure] = useState("");
   const [configuration, setConfiguration] = useState("");
   
 
@@ -162,15 +163,13 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
       window.alert("Invalid configuration format. Please enter a valid JSON object.");
       return;
     }
-    const response = await sendData("/admin/submitconfiguration", {configuration: parsedConfig});
+    const response = await sendData("/admin/submitconfiguration", {configuration: parsedConfig, username: usernameToConfigure.trim().length > 0 ? usernameToConfigure.trim() : null});
     if (response.status !== "success") {
       window.alert("Error: " + response.message);
       return;
     }
     window.alert("Configuration submitted successfully!");
   }
-
- 
 
   return (
     <div className='Admin' style={{width: "100%"}} {...props}>
@@ -181,6 +180,7 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
           <div style={{marginTop: '1vh'}}></div>
           <h2>{editPerson.username}</h2>
           <h4>{editPerson.friends.length} friend{editPerson.friends.length===1 ? "":"s"}</h4>
+          <h4>{editPerson.pastWorkoutsLength} completed workout{editPerson.pastWorkoutsLength===1 ? "":"s"}</h4>
           <h4>{editPerson.extraDetails.ai.image.used} AI images used</h4>
           <h4>{editPerson.extraDetails.ai.foodText?.used ?? 0} AI food text used</h4>
           <div style={{marginTop: '1vh'}}></div>
@@ -297,6 +297,13 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
       ) : page === 2 ? (
         <div className='scrollview' style={{backgroundColor: "#444444ff", borderRadius: "1vh", padding: "2vh", marginTop: 10 }}>
           <h1>Add configuration to users.</h1>
+          <h3>User - Leave blank to apply to all users</h3>
+          <input 
+            type="text"
+            placeholder="Enter username..."
+            value={usernameToConfigure}
+            onChange={(e) => setUsernameToConfigure(e.target.value)}
+          />
           <p>
             ex. {'{'}"extraDetails": {'{'}"preferences": {'{'}"allPushNotifications": true ...{'}}}'}
           </p>

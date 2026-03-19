@@ -18,7 +18,7 @@ router.post('/', authToken, async (req, res) => {
                 message: 'Not admin.',
             });
         }
-        const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1, extraDetails: 1 });
+        const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1, extraDetails: 1, pastWorkoutsLength: { $size: "$pastWorkouts" } });
         const supportTickets = await Support.find({})
             .sort({ timestamp: -1 })
             .limit(50);
@@ -69,7 +69,7 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
         res.cookie('auth-token', token, {expires: new Date(Date.now() + 20 * 365 *  24 * 60 * 60 * 1000) });
 
-        const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1, extraDetails: 1 });
+        const users = await User.find({}, { username: 1, _id: 1, premium: 1, profileImg: 1, usernameDecoration: 1, /* Admin stuff next */ verifyEmailCode: 1, rank: 1, trouble: 1, friends: 1, extraDetails: 1, pastWorkoutsLength: { $size: "$pastWorkouts" } });
         const supportTickets = await Support.find({})
             .sort({ timestamp: -1 })
             .limit(50);
@@ -366,7 +366,7 @@ router.post("/submitconfiguration", authToken, async (req, res) => {
             return res.status(403).json({ status: 'error', message: 'Not admin.' });
         }
 
-        const { configuration } = req.body; 
+        const { configuration, username } = req.body; 
 
         if (!configuration || typeof configuration !== "object") {
             return res.status(400).json({ status: 'error', message: 'Invalid JSON.' });
@@ -379,7 +379,17 @@ router.post("/submitconfiguration", authToken, async (req, res) => {
         // 2. Perform a single bulk update
         // {} matches all users. $set with dot notation preserves other fields.
         console.log("Update data:", updateData);
-        await User.updateMany({}, { $set: updateData });
+
+        if (username) {
+            const user = await User.findOne({ username: username.trim() }).select('_id');
+            if (!user) {
+                return res.json({ status: 'error', message: 'User not found.' });
+            }
+            await User.updateOne({ _id: user._id }, { $set: updateData });
+        } else {
+            await User.updateMany({}, { $set: updateData });
+        }
+        
 
         return res.json({ status: "success" });
     } catch (err) {
