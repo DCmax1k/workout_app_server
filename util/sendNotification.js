@@ -9,6 +9,10 @@ const sendNotification = async (pushToken, title, messageBody, extraData='') => 
     title: title,
     body: messageBody,
     data: { someData: extraData },
+
+    android: {
+      channelId: 'default', // This MUST match the ID in setNotificationChannelAsync
+    },
   }];
 
   // 2. Chunk messages (Expo recommends this for multiple notifications)
