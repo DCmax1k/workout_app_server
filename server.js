@@ -247,7 +247,7 @@ app.use('/ai', aiRoute);
 
 const stripeRoute = require('./routes/stripe');
 const { sendOwnerNotification } = require('./util/sendEmail');
-const sendNotification = require('./util/sendNotification');
+const { sendNotification, requestSendPushNotification } = require('./util/sendNotification');
 app.use('/stripe', stripeRoute);
 
 // Get necesasry user info from db when authenticating
@@ -338,6 +338,7 @@ app.post('/auth', authToken, async (req, res) => {
         const userInfo = {
             recentActivity,
             dbId: req.userId,
+            pushTokens: user.pushTokens,
             username: user.username,
             name: user.name,
             email: user.email,
@@ -410,7 +411,7 @@ app.get('/health', (req, res) => {
 });
 
 app.post('/save-push-token', authToken, async (req, res) => {
-    const { pushToken } = req.body;
+    const { pushToken, deviceInfo, active} = req.body;
     if (!pushToken) {
         return res.status(400).json({ status: "error", message: "Push token is required" });
     }
@@ -419,7 +420,22 @@ app.post('/save-push-token', authToken, async (req, res) => {
         if (!user) {
             return res.status(404).json({ status: "error", message: "User not found" });
         }
-        user.pushToken = pushToken;
+        if (user.pushTokens.some(pt => pt.token === pushToken && pt.active === active)) {
+            // console.log("Push token already saved for user with same active status: ", pushToken);
+            return res.json({ status: "success", message: "Push token already saved" });
+        } else if (user.pushTokens.some(pt => pt.token === pushToken && pt.active !== active)) {
+            user.pushTokens = user.pushTokens.map(pt => {
+                if (pt.token === pushToken) {
+                    return { token: pushToken, active, deviceInfo };
+                }
+                return pt;
+            });
+            await user.save();
+            // console.log("Set push token active for user to: ", active);
+            return res.json({ status: "success", message: "Push token re-activated successfully" });
+        }
+        console.log("Saving new push token for user: ", user.username, pushToken);
+        user.pushTokens.push({ token: pushToken, active, deviceInfo });
         await user.save();
         res.json({ status: "success", message: "Push token saved successfully" });
     }
@@ -430,6 +446,7 @@ app.post('/save-push-token', authToken, async (req, res) => {
 });
 
 //sendNotification("ExponentPushToken[odAI9NHMeQD0ZuleqKSefG]", "Test Notification", "This is a test notification from the backend!", "Extra data goes here!");
+//requestSendPushNotification([{token: "ExponentPushToken[odAI9NHMeQD0ZuleqKSefG]", active: false, deviceInfo: null}], "Test Notification", "This is a test notification from the backend!", "Extra data goes here!");
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
     console.log('Connected to MongoDB');

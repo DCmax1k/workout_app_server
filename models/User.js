@@ -9,9 +9,9 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-    pushToken: {
-        type: String,
-        default: "",
+    pushTokens: {
+        type: [Object], // [{token: "ExponentPushToken[xxx...]", active, deviceInfo,}]
+        default: [],
     },
     username: {
         type: String,
@@ -117,6 +117,12 @@ const UserSchema = new mongoose.Schema({
                 // Sharing
                 workouts: true,
                 achievements: true,
+
+                // Notifications
+                allPushNotifications: true,
+                friendsActivityPush: true,
+                activityReactionPush: true,
+                friendRequestsPush: true,
                 // .......
             },
         },

@@ -11,6 +11,7 @@ const getUserInfo = require('../util/getUserInfo');
 const findInsertIndex = require('../util/findInsertIndex');
 const getDateKey = require('../util/getDateKey');
 const confirmActivityPreferences = require('../util/confirmActivityPrefs');
+const { requestSendPushNotification } = require('../util/sendNotification');
 
 function validateUsername(username) {
     if (username === 'YOU') return "Username cannot be 'YOU'";
@@ -230,6 +231,23 @@ router.post('/requestactivity', authToken, async (req, res) => {
             allPeopleDetails[pId] = pInfo;
         }));
 
+        // Send notifications to people in activity except user
+        userFriends.forEach(async fId => {
+            if (fId === req.userId) return;
+            const friend = await User.findById(fId);
+            if (!friend) return;
+            const sendNoti = friend.extraDetails?.preferences?.friendsActivityPush ?? true;
+            if (sendNoti) {
+                const pushTokens = friend.pushTokens;
+                if (pushTokens.length === 0) return;
+                const title = `${user.username}`;
+                const messageBody = showAchievement ? `Just achieved a new milestone!` : activityData.type === "complete_workout" ? `Just completed a workout!` : `Just shared an activity!`;
+                requestSendPushNotification(pushTokens, title, messageBody, {type: "activity", activityId: newActivity._id});
+
+            }
+        });
+
+
         return res.json({status: "success", activity: {...act, peopleDetails},});
 
     } catch(err) {
@@ -332,6 +350,25 @@ router.post('/activityreact', authToken, async (req, res) => {
         activity.markModified("reactions");
         await activity.save();
 
+        // Send push noti to owner of activity about reation
+        const ownerID = activity.userId;
+        if (ownerID !== req.userId) {
+            if (activity.reationNotificationsSent?.includes(req.userId)) {
+                console.log("Already sent reaction notification for this user");
+                return res.json({status: "success", activity: {...activity.toJSON()}});
+            }
+            const owner = await User.findById(ownerID);
+            const user = await User.findById(req.userId);
+            const sendNoti = owner.extraDetails?.preferences?.activityReactionPush ?? true;
+            if (sendNoti) {
+                activity.reationNotificationsSent = [...activity.reationNotificationsSent, req.userId];
+                await activity.save();
+                const pushTokens = owner.pushTokens;
+                requestSendPushNotification(pushTokens, "New Activity Reaction", `${user.username} just reacted to your activity!`, {type: "activity_reaction", activityId: activity._id});
+            }
+        }
+
+
         return res.json({status: "success", activity: {...activity.toJSON()}});
 
     } catch(err) {
@@ -373,6 +410,10 @@ const addUser = async (user, friend) => {
     friend.friendRequests = newPersonFriendRequests;
     friend.markModified("friendRequests");
     await friend.save();
+    // Send push noti to friend about request
+    if (friend.extraDetails?.preferences?.friendRequestsPush ?? true) {
+        requestSendPushNotification(friend.pushTokens, "New Friend Request", `${user.username} just sent you a friend request!`, {type: "friend_request", userId: user._id});
+    }
 }
 const acceptUser = async (user, friend) => {
     // Remove friend from user friendrequests & Add friend to user friends
@@ -393,6 +434,10 @@ const acceptUser = async (user, friend) => {
     friend.markModified("friends");
     await friend.save();
 
+    // Send push noti to friend about acceptance
+    if (friend.extraDetails?.preferences?.friendRequestsPush ?? true) {
+        requestSendPushNotification(friend.pushTokens, "Friend Request Accepted", `${user.username} just accepted your friend request!`, {type: "friend_accept", userId: user._id});
+    }
 }
 
 // HANDLES (Add user / send friend request) & (Accept user friend request)

@@ -347,5 +347,45 @@ router.post("/dismissticket", authToken, async (req, res) => {
     }
 });
 
+const flattenObject = (obj, prefix = '') => {
+  return Object.keys(obj).reduce((acc, k) => {
+    const pre = prefix.length ? prefix + '.' : '';
+    if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
+      Object.assign(acc, flattenObject(obj[k], pre + k));
+    } else {
+      acc[pre + k] = obj[k];
+    }
+    return acc;
+  }, {});
+};
+
+router.post("/submitconfiguration", authToken, async (req, res) => {
+    try {
+        const admin = await User.findById(req.userId);
+        if (admin.rank !== 'admin') {
+            return res.status(403).json({ status: 'error', message: 'Not admin.' });
+        }
+
+        const { configuration } = req.body; 
+
+        if (!configuration || typeof configuration !== "object") {
+            return res.status(400).json({ status: 'error', message: 'Invalid JSON.' });
+        }
+
+        // 1. Convert { extraDetails: { preferences: { theme: 'dark' } } }
+        //    Into { "extraDetails.preferences.theme": "dark" }
+        const updateData = flattenObject(configuration);
+
+        // 2. Perform a single bulk update
+        // {} matches all users. $set with dot notation preserves other fields.
+        console.log("Update data:", updateData);
+        await User.updateMany({}, { $set: updateData });
+
+        return res.json({ status: "success" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal error' });
+    }
+});
 
 module.exports = router;

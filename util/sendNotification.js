@@ -17,7 +17,7 @@ const sendNotification = async (pushToken, title, messageBody, extraData='') => 
   for (let chunk of chunks) {
     try {
       let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-      console.log(ticketChunk);
+      // console.log(ticketChunk);
       // NOTE: Tickets only confirm Expo RECEIVED the request.
       // You should check receipts later for actual delivery status.
     } catch (error) {
@@ -26,4 +26,16 @@ const sendNotification = async (pushToken, title, messageBody, extraData='') => 
   }
 };
 
-module.exports = sendNotification;
+const requestSendPushNotification = async (pushTokens, title, messageBody, extraData='') => {
+  for (let tokenObj of pushTokens) {
+    if (tokenObj.active) {
+      await sendNotification(tokenObj.token, title, messageBody, extraData);
+    }
+  }
+};
+
+
+module.exports = {
+  sendNotification,
+  requestSendPushNotification,
+};

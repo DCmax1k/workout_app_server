@@ -40,6 +40,10 @@ const ActivitySchema = new mongoose.Schema({
         default: {},
         required: true,
     },
+    reationNotificationsSent: {
+        type: [String], // list of userIds that have been sent a notification for this activity reaction
+        default: [],
+    }
 
 });
 

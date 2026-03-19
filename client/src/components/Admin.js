@@ -23,6 +23,8 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
   const [passwordValue, setPasswordValue] = useState("");
 
   const [page, setPage] = useState(0); // 0 users, 1 support tickets
+
+  const [configuration, setConfiguration] = useState("");
   
 
   const [editPerson, setEditPerson] = useState(null);
@@ -138,6 +140,36 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
     });
     setSupportTickets(newTickets);
   }
+
+  const requestSubmitConfiguration = () => {
+    const confirmation = window.confirm("Submit configuration?");
+    if (confirmation) {
+      submitconfirmation();
+    }
+  }
+
+  const submitconfirmation = async () => {
+    console.log(configuration)
+    let parsedConfig;
+    try {
+        parsedConfig = JSON.parse(configuration);
+    } catch(e) {
+        window.alert("Invalid JSON format. Please enter a valid JSON object.");
+        return;
+    }
+    console.log(parsedConfig);
+    if (!parsedConfig || typeof parsedConfig !== "object") {
+      window.alert("Invalid configuration format. Please enter a valid JSON object.");
+      return;
+    }
+    const response = await sendData("/admin/submitconfiguration", {configuration: parsedConfig});
+    if (response.status !== "success") {
+      window.alert("Error: " + response.message);
+      return;
+    }
+    window.alert("Configuration submitted successfully!");
+  }
+
  
 
   return (
@@ -185,13 +217,35 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
       
       <input value={searchValue} onInput={(e) => setSearchValue(e.target.value)} style={{outline: "none", border: "none", backgroundColor: "#b4b4b4ff", padding: 5, borderRadius: 5}} placeholder='Search user' />
       
+      {/* Pages: 0 - users, 1 - support tickets, 2 - configure users */}
       {page === 0 ? (
-        <div className='button' onClick={() => {setPage(1)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
-          New Support Tickets: {supportTickets.filter(t => !t.dismissed).length}
+        <div style={{display: "flex", gap: 10, width: "100%"}}>
+          <div className='button' onClick={() => {setPage(1)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+            New Support Tickets: {supportTickets.filter(t => !t.dismissed).length}
+          </div>
+          <div className='button' onClick={() => {setPage(2)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+            DEV
+          </div>
         </div>
+        
+        
       ) : page === 1 ? (
-        <div className='button' onClick={() => {setPage(0)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
-            Show Users: {users.length}
+        <div style={{display: "flex", gap: 10, width: "100%"}}>
+          <div className='button' onClick={() => {setPage(0)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+              Show Users: {users.length}
+          </div>
+          <div className='button' onClick={() => {setPage(2)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+            DEV
+          </div>
+        </div>
+      ) : page === 2 ? (
+        <div style={{display: "flex", gap: 10, width: "100%"}}>
+          <div className='button' onClick={() => {setPage(0)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+              Show Users: {users.length}
+          </div>
+          <div className='button' onClick={() => {setPage(1)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+            New Support Tickets: {supportTickets.filter(t => !t.dismissed).length}
+          </div>
         </div>
       ) : null}
       
@@ -239,6 +293,21 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
                 </div>
               )
             })}
+        </div>
+      ) : page === 2 ? (
+        <div className='scrollview' style={{backgroundColor: "#444444ff", borderRadius: "1vh", padding: "2vh", marginTop: 10 }}>
+          <h1>Add configuration to users.</h1>
+          <p>
+            ex. {'{'}"extraDetails": {'{'}"preferences": {'{'}"allPushNotifications": true ...{'}}}'}
+          </p>
+          <textarea rows={10} style={{width: "100%", fontSize: 30}} onInput={(e) => setConfiguration(e.target.value)} value={configuration} type="text" placeholder="Enter configuration..." />
+          <br />
+          <br />
+          <br />
+          <div className='button' onClick={requestSubmitConfiguration} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+            Submit
+          </div>
+          
         </div>
       ) : null}
       
