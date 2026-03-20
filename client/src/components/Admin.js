@@ -171,12 +171,21 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
     window.alert("Configuration submitted successfully!");
   }
 
+  const openViewUserData = (userId) => {
+    // open in new tab
+    window.open("/admin/viewuserdata?userId=" + userId, "_blank");
+  }
+
   return (
     <div className='Admin' style={{width: "100%"}} {...props}>
 
       {editPerson && (
-        <div style={{position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", padding: "2vh", display: "flex", flexDirection: "column", minHeight: 300, width: 200, backgroundColor: "#3f3f3fff", cursor: "pointer", zIndex: 5}}>
-          <button onClick={() => setEditPerson(null)}>close</button>
+        <div style={{position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", padding: "2vh", display: "flex", flexDirection: "column", minHeight: 300, width: 300, backgroundColor: "#3f3f3fff", cursor: "pointer", zIndex: 5}}>
+          <div style={{display: "flex", flexDirection: "row", gap: 10, justifyContent: "space-between"}}>
+            <button onClick={() => setEditPerson(null)}>close</button>
+            <button onClick={() => openViewUserData(editPerson._id)}>View User Data</button>
+          </div>
+          
           <div style={{marginTop: '1vh'}}></div>
           <h2>{editPerson.username}</h2>
           <h4>{editPerson.friends.length} friend{editPerson.friends.length===1 ? "":"s"}</h4>

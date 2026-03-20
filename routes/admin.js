@@ -398,4 +398,28 @@ router.post("/submitconfiguration", authToken, async (req, res) => {
     }
 });
 
+// View user data route
+router.get("/viewuserdata", authToken, async (req, res) => {
+    try {
+        const admin = await User.findById(req.userId);
+        if (admin.rank !== 'admin') {
+            return res.status(403).json({ status: 'error', message: 'Not admin.' });
+        }
+        const { userId } = req.query;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ status: 'error', message: 'User not found.' });
+        }
+
+        //res.json({ status: 'success', data: user });
+        const formattedData = JSON.stringify({ status: 'success', data: user }, null, 2);
+        res.header("Content-Type", 'application/json');
+        res.send(formattedData);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal error' });
+    }
+});
+
 module.exports = router;
