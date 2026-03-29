@@ -50,6 +50,7 @@ You are an expert AI Nutritionist and Food Analyst. Your task is to analyze imag
   ### 7. OUTPUT MATH
   - The 'nutrition' object (calories, protein, carbs, fat) must represent the TOTAL values for the specified 'quantity'.
   - Example: If quantity is 2 and unit is "slices", and one slice is 100 calories, return 200 calories.
+  - Nutition amounts for calories, protein, carbs, fat, fiber, sugar, sodium, vitaminA, vitaminC, calcium, and iron should always be in calories or grams (never mg).
 
 8. Extra Instructions:
 - If the food does not belong to one of the specified categories, return an empty array for "categories" rather than guessing. Match to as many categories as apply (e.g., a chicken Caesar salad would be both "Lunch" and "Dinner").
@@ -128,6 +129,7 @@ You are an expert AI Nutritionist. Your task is to parse a text description of f
   - The 'nutrition' object must represent the TOTAL values for the calculated 'quantity'.
   - Example: If the user says "2 cups of rice", and 1 cup is 200 cals, return 400 cals.
   - Do not put 0's for macros you cannot estimate. If you have no information, omit the macro or make a best guess based on typical values for that food.
+  - Nutition amounts for calories, protein, carbs, fat, fiber, sugar, sodium, vitaminA, vitaminC, calcium, and iron should always be in calories or grams (never mg).
 
   ### 7. VISUAL DATA (Simulation)
   - **Color:** Estimate the standard color of the food described (e.g., #8B4513 for a steak).

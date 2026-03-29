@@ -49,7 +49,8 @@ router.post("/analyzefood", authToken, async (req, res) => {
       if (aiUsage.credits <= 0) {
         return res.json({ 
           status: "error", 
-          message: "Daily scans are a Premium feature. Upgrade to get 10 image scans every day!" 
+          message: "Daily scans are a Premium feature. Upgrade to get 10 image scans every day!",
+          showPremiumButton: true,
         });
       }
     }
@@ -112,7 +113,8 @@ router.post("/analyzefoodtext", authToken, async (req, res) => {
       if (aiUsage.credits <= 0) {
         return res.json({ 
           status: "error", 
-          message: "Daily scans are a Premium feature. Upgrade to get 30 text scans every day!" 
+          message: "Daily scans are a Premium feature. Upgrade to get 30 text scans every day!",
+          showPremiumButton: true,
         });
       }
     }

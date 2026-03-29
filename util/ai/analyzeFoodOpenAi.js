@@ -59,9 +59,18 @@ const analyzeFoodOpenAi = async ({ imageBase64, userPrompt }) => {
                         calories: { type: "number" },
                         protein: { type: "number" },
                         carbs: { type: "number" },
-                        fat: { type: "number" }
+                        fat: { type: "number" },
+
+                        // New nutrition values and vitamens/minerals 
+                        fiber: { type: "number" },
+                        sugar: { type: "number" },
+                        sodium: { type: "number" },
+                        vitaminA: { type: "number" },
+                        vitaminC: { type: "number" },
+                        calcium: { type: "number" },
+                        iron: { type: "number" },
                       },
-                      required: ["calories", "protein", "carbs", "fat"],
+                      required: ["calories", "protein", "carbs", "fat", "fiber", "sugar", "sodium", "vitaminA", "vitaminC", "calcium", "iron"],
                       additionalProperties: false
                     },
                     description: { type: "string" },

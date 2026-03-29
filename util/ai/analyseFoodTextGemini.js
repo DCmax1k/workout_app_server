@@ -28,9 +28,19 @@ const analyzeFoodTextGemini = async ({ userPrompt }) => {
                 calories: { type: "NUMBER" },
                 protein: { type: "NUMBER" },
                 carbs: { type: "NUMBER" },
-                fat: { type: "NUMBER" }
+                fat: { type: "NUMBER" },
+
+                // New nutrition values and vitamens/minerals 
+                fiber: { type: "NUMBER" },
+                sugar: { type: "NUMBER" },
+                sodium: { type: "NUMBER" },
+                vitaminA: { type: "NUMBER" },
+                vitaminC: { type: "NUMBER" },
+                calcium: { type: "NUMBER" },
+                iron: { type: "NUMBER" },
+                
               },
-              required: ["calories", "protein", "carbs", "fat"]
+              required: ["calories", "protein", "carbs", "fat", "fiber", "sugar", "sodium", "vitaminA", "vitaminC", "calcium", "iron"]
             },
             description: { type: "STRING" },
             categories: { type: "array", items: { type: "string", enum: ["Breakfast", "Lunch", "Dinner", "Snacks", "Beverages", "Fruits & Vegetables",] } },

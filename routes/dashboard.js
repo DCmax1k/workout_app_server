@@ -947,6 +947,18 @@ router.post('/setpreference', authToken, async (req, res) => {
     } catch(err) {
         console.error(err);
     }
-})
+});
+
+router.post('/deleteaccount', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        await User.deleteOne({_id: req.userId});
+        res.json({status: "success", message: "Account deleted"});
+    } catch(err) {
+        console.error(err);
+        res.json({status: "error", message: "Failed to delete account"});
+    }
+});
 
 module.exports = router;
