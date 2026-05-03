@@ -190,8 +190,8 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
           <h2>{editPerson.username}</h2>
           <h4>{editPerson.friends.length} friend{editPerson.friends.length===1 ? "":"s"}</h4>
           <h4>{editPerson.pastWorkoutsLength} completed workout{editPerson.pastWorkoutsLength===1 ? "":"s"}</h4>
-          <h4>{editPerson.extraDetails.ai.image.used} AI images used</h4>
-          <h4>{editPerson.extraDetails.ai.foodText?.used ?? 0} AI food text used</h4>
+          <h4>{editPerson.extraDetails.ai?.image?.used ?? 0} AI images used</h4>
+          <h4>{editPerson.extraDetails.ai?.foodText?.used ?? 0} AI food text used</h4>
           <div style={{marginTop: '1vh'}}></div>
           <button onClick={addCredit}>Add 1 image Credit</button>
           <div style={{marginTop: '1vh'}}></div>
