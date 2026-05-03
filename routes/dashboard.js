@@ -961,4 +961,29 @@ router.post('/deleteaccount', authToken, async (req, res) => {
     }
 });
 
+router.post('/dismisswarning', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {warningId} = req.body;
+        const warnings = user.trouble?.warnings || [];
+        const newWarnings = warnings.map(w => {
+            if (w.id === warningId) {
+                return {...w, active: false};
+            }
+            return w;
+        });
+        if (!user.trouble) user.trouble = {};
+        user.trouble.warnings = newWarnings;
+        user.markModified("trouble");
+        await user.save();
+        res.json({status: "success",});
+    } catch(err) {
+        console.error(err);
+        res.json({status: "error", message: "Failed to dismiss warning"});
+    }
+});
+
+
+
 module.exports = router;

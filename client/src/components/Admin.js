@@ -17,6 +17,7 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
   const navigate = useNavigate();
 
   const [searchValue, setSearchValue] = useState("");
+  const [warnTitleValue, setWarnTitleValue] = useState("");
   const [warnValue, setWarnValue] = useState("");
   const [prefixValue, setPrefixValue] = useState("");
   const [prefixColorValue, setPrefixColorValue] = useState("");
@@ -45,7 +46,17 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
   }
 
   const submitWarn = async () => {
-    console.log("submit warn");
+    const warning = {message: warnValue, title: warnTitleValue, active: true, date: new Date(), id: null};
+    const response = await sendData("/admin/assignwarn", {userId: editPerson._id, warn: warning});
+    if (response.status !== "success") {
+      console.log(response.message);
+      return;
+    }
+    const newPerson = {...editPerson, trouble: {...editPerson.trouble, warnings: [...editPerson.trouble.warnings, warning]}}; // append to warnings array
+    setPerson(newPerson);
+    setWarnValue("");
+    setWarnTitleValue("");
+    window.alert("Successful");
   }
   const submitPrefix = async () => {
     const response = await sendData("/admin/assignprefix", {userId: editPerson._id, value: prefixValue,});
@@ -195,9 +206,10 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
           <div style={{marginTop: '1vh'}}></div>
           <button onClick={addCredit}>Add 1 image Credit</button>
           <div style={{marginTop: '1vh'}}></div>
-          <label>WARN - coming soon</label>
-          <input value={warnValue} onInput={(e) => setWarnValue(e.target.value)} />
-          {warnValue.length > 0 && (<button onClick={submitWarn}>Submit</button>)}
+          <label>Warns - {editPerson.trouble.warnings.filter(a => a.active).length} active</label>
+          <input value={warnTitleValue} placeholder='title' onInput={(e) => setWarnTitleValue(e.target.value)} />
+          <input value={warnValue} placeholder='body' onInput={(e) => setWarnValue(e.target.value)} />
+          {warnValue.length > 0 && warnTitleValue.length > 0 && (<button onClick={submitWarn}>Submit</button>)}
           <div style={{marginTop: '1vh'}}></div>
           <label>Prefix</label>
           <input value={prefixValue} onInput={(e) => setPrefixValue(e.target.value)} />

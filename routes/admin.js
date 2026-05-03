@@ -7,6 +7,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Support = require('../models/Support');
 const { sendMessageConfirmation } = require('../util/sendEmail');
+const generateUniqueId = require('../util/uniqueId');
 
 // Check auth initially
 router.post('/', authToken, async (req, res) => {
@@ -416,6 +417,30 @@ router.get("/viewuserdata", authToken, async (req, res) => {
         const formattedData = JSON.stringify({ status: 'success', data: user }, null, 2);
         res.header("Content-Type", 'application/json');
         res.send(formattedData);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal error' });
+    }
+});
+
+// assignwarn
+router.post("/assignwarn", authToken, async (req, res) => {
+  try {
+      const admin = await User.findById(req.userId);
+        if (admin.rank !== 'admin') {
+            return res.status(403).json({ status: 'error', message: 'Not admin.' });
+        }
+      const {userId, warn} = req.body;
+      const user = await User.findById(userId);
+      const trouble = user.trouble || { warnings: [], bans: [], frozen: false };
+      if (!trouble.warnings) trouble.warnings = [];
+      trouble.warnings.push({...warn, id: generateUniqueId()});
+      user.trouble = trouble;
+      user.markModified("trouble");
+    await user.save();
+    return res.json({
+        status: "success",
+    });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal error' });
