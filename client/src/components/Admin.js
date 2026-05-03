@@ -206,7 +206,7 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
           <div style={{marginTop: '1vh'}}></div>
           <button onClick={addCredit}>Add 1 image Credit</button>
           <div style={{marginTop: '1vh'}}></div>
-          <label>Warns - {editPerson.trouble.warnings.filter(a => a.active).length} active</label>
+          <label>Warns - {editPerson.trouble?.warnings?.filter(a => a.active).length ?? 0} active</label>
           <input value={warnTitleValue} placeholder='title' onInput={(e) => setWarnTitleValue(e.target.value)} />
           <input value={warnValue} placeholder='body' onInput={(e) => setWarnValue(e.target.value)} />
           {warnValue.length > 0 && warnTitleValue.length > 0 && (<button onClick={submitWarn}>Submit</button>)}
