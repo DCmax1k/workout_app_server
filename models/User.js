@@ -125,6 +125,7 @@ const UserSchema = new mongoose.Schema({
                 friendRequestsPush: true,
                 // .......
             },
+            updateFeedSeen: null,
         },
 
     },

@@ -984,6 +984,22 @@ router.post('/dismisswarning', authToken, async (req, res) => {
     }
 });
 
+// update the updates feed counter to value sent by client
+router.post('/updatefeedcount', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {counter} = req.body;
+        console.log(counter);
+        user.extraDetails.updateFeedSeen = counter;
+        user.markModified("extraDetails");
+        await user.save();
+        res.json({status: "success",});
+    } catch(err) {
+        console.error(err);
+        res.json({status: "error", message: "Failed to update feed counter"});
+    }
+});
 
 
 module.exports = router;
