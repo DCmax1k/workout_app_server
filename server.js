@@ -14,7 +14,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 
 // VERSION
-const VERSION = "1.0.10";
+const VERSION = "1.0.11";
 
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
