@@ -80,10 +80,21 @@ const analyzeFoodTextGemini = async ({ userPrompt }) => {
       return (quantity === 1 || quantity === 0) ? food : {
         ...food,
         nutrition: {
-          calories: food.nutrition.calories / quantity,
-          protein: food.nutrition.protein / quantity,
-          carbs: food.nutrition.carbs / quantity,
-          fat: food.nutrition.fat / quantity,
+            calories: (food.nutrition.calories || 0) / quantity,
+            protein: (food.nutrition.protein || 0) / quantity,
+            carbs: (food.nutrition.carbs || 0) / quantity,
+            fat: (food.nutrition.fat || 0) / quantity,
+            
+            // New nutrition values
+            fiber: (food.nutrition.fiber || 0) / quantity,
+            sugar: (food.nutrition.sugar || 0) / quantity,
+            sodium: (food.nutrition.sodium || 0) / quantity,
+            
+            // Vitamins and Minerals
+            vitaminA: (food.nutrition.vitaminA || 0) / quantity,
+            vitaminC: (food.nutrition.vitaminC || 0) / quantity,
+            calcium: (food.nutrition.calcium || 0) / quantity,
+            iron: (food.nutrition.iron || 0) / quantity,
         }
       };
     });

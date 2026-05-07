@@ -6,12 +6,16 @@ const cloudinary = require("../util/cloudinary");
 
 const User = require('../models/User');
 const Activity = require('../models/Activity');
+const BarcodeFood = require('../models/BarcodeFood');
+
 const deepMerge = require('../util/deepMerge');
 const getUserInfo = require('../util/getUserInfo');
 const findInsertIndex = require('../util/findInsertIndex');
 const getDateKey = require('../util/getDateKey');
 const confirmActivityPreferences = require('../util/confirmActivityPrefs');
 const { requestSendPushNotification } = require('../util/sendNotification');
+const fetchFoodDataFromAPI = require('../util/fetchFoodDataFromAPI');
+const generateUniqueId = require('../util/uniqueId');
 
 function validateUsername(username) {
     if (username === 'YOU') return "Username cannot be 'YOU'";
@@ -998,6 +1002,64 @@ router.post('/updatefeedcount', authToken, async (req, res) => {
     } catch(err) {
         console.error(err);
         res.json({status: "error", message: "Failed to update feed counter"});
+    }
+});
+
+// barcode route with cooldown - checks DB first, if not found checks cooldown, if cooldown passed hits API, then saves to DB
+const apiCooldowns = new Map();
+router.post('/fetchbarcode', authToken, async (req, res) => {
+    try {
+        const { barcode } = req.body;
+        const userId = req.userId;
+
+        // 1. ALWAYS check the DB first (Unlimited usage)
+        let food = await BarcodeFood.findOne({ barcode });
+
+        if (food) {
+            console.log("returning ", food.data);
+            return res.json({ status: "success", food: {id: generateUniqueId(), ...food.data} });
+        }
+
+        // 2. ITEM NOT IN DB - Check Cooldown before hitting external API
+        const COOLDOWN_TIME = 60 * 1000; // 60 seconds
+        const lastApiCall = apiCooldowns.get(userId);
+        const now = Date.now();
+
+        if (lastApiCall && (now - lastApiCall) < COOLDOWN_TIME) {
+            const waitTime = Math.ceil((COOLDOWN_TIME - (now - lastApiCall)) / 1000);
+            return res.json({ 
+                status: "error", 
+                message: `To keep this free, please wait ${waitTime}s to fetch new item.` 
+            });
+        }
+
+        // 3. Update the cooldown timestamp IMMEDIATELY before the fetch
+        apiCooldowns.set(userId, now);
+
+        // 4. Hit the external API
+        const apiFoodData = await fetchFoodDataFromAPI(barcode);
+        
+        if (apiFoodData.status_verbose === "product not found") {
+            return res.json({ status: "success", message: "Product not found" });
+        }
+
+        // 5. Atomic Upsert to save the new item
+        food = await BarcodeFood.findOneAndUpdate(
+            { barcode }, 
+            {
+                barcode,
+                data: apiFoodData,
+                verified: true,
+                ownerId: userId
+            },
+            { upsert: true, new: true }
+        );
+        console.log("returning ", food.data);
+        res.json({ status: "success", food: {id: generateUniqueId(), ...food.data} });
+
+    } catch (err) {
+        console.error("Barcode Error:", err);
+        res.status(500).json({ status: "error", message: "Server error" });
     }
 });
 
