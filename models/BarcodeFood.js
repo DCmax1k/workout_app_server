@@ -12,9 +12,10 @@ const BarcodeFoodSchema = new mongoose.Schema({
             name: "",
             unit: "",
             nutrition: {},
-            icon: null,
             image: null,
             description: "",
+            quantity: 0,
+            unit: '',
         }
     },
     ownerId: {

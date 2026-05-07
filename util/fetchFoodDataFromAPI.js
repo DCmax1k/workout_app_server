@@ -2,6 +2,7 @@
 const creds = process.env.FOOD_API_CREDS || "off:off";
 
 
+
 const fetchFoodDataFromAPI = async (barcode) => {
     try {
         const url = `https://world.openfoodfacts.${creds === "off:off" ? "net" : "org"}/api/v2/product/${barcode}.json`;
