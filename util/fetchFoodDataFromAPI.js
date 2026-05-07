@@ -1,6 +1,5 @@
 
-//const creds = process.env.FOOD_API_CREDS || "off:off";
-const creds = process.env.FOOD_API_CREDS || "digitalcaldwell:*jOb-4DtN-dC$g";
+const creds = process.env.FOOD_API_CREDS || "off:off";
 
 
 const fetchFoodDataFromAPI = async (barcode) => {
