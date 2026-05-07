@@ -25,6 +25,10 @@ const BarcodeFoodSchema = new mongoose.Schema({
     verified: {
         type: Boolean,
         default: false,
+    },
+    dateAdded: {
+        type: Date,
+        default: Date.now,
     }
 
 });

@@ -21,9 +21,9 @@ const fetchFoodDataFromAPI = async (barcode) => {
             quantity: parseFloat(data.product.serving_quantity) || 0,
             unit: data.product.serving_quantity_unit || 'unit',
             description: data.product.generic_name || "",
-            image: data.selected_images?.front?.display?.["en"] || null,
+            image: data.product.selected_images?.front?.display?.["en"] || null,
         };
-        const nutrition = {
+        let nutrition = {
             calories: (data.product.nutriments?.["energy-kcal_serving"] || 0) / dataToStore.quantity,
             protein: (data.product.nutriments?.proteins_serving || 0) / dataToStore.quantity,
             carbs: (data.product.nutriments?.carbohydrates_serving || 0) / dataToStore.quantity,
@@ -38,6 +38,25 @@ const fetchFoodDataFromAPI = async (barcode) => {
             calcium: (data.product.nutriments?.calcium_serving || 0) / dataToStore.quantity,
             iron: (data.product.nutriments?.iron_serving || 0) / dataToStore.quantity,
         };
+        if (isNaN(nutrition["calories"]) || nutrition["calories"] <= 0) {
+            dataToStore.quantity = 100/10;
+            dataToStore.unit = 'g'
+            nutrition = {
+                calories: ((data.product.nutriments?.["energy-kcal_100g"] || 0) / dataToStore.quantity)/10,
+                protein: ((data.product.nutriments?.["proteins_100g"] || 0) / dataToStore.quantity)/10,
+                carbs: ((data.product.nutriments?.["carbohydrates_100g"] || 0) / dataToStore.quantity)/10,
+                fat: ((data.product.nutriments?.["fat_100g"] || 0) / dataToStore.quantity)/10,
+
+                // New nutrition values and vitamins/minerals
+                fiber: ((data.product.nutriments?.["fiber_100g"] || 0) / dataToStore.quantity)/10,
+                sugar: ((data.product.nutriments?.["sugars_100g"] || 0) / dataToStore.quantity)/10,
+                sodium: ((data.product.nutriments?.["sodium_100g"] || 0) / dataToStore.quantity)/10,
+                vitaminA: ((data.product.nutriments?.["vitamin-a_100g"] || 0) / dataToStore.quantity)/10,
+                vitaminC: ((data.product.nutriments?.["vitamin-c_100g"] || 0) / dataToStore.quantity)/10,
+                calcium: ((data.product.nutriments?.["calcium_100g"] || 0) / dataToStore.quantity)/10,
+                iron: ((data.product.nutriments?.["iron_100g"] || 0) / dataToStore.quantity)/10,
+            }
+        }
         dataToStore.nutrition = nutrition;
 
         return dataToStore;
