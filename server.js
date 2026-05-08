@@ -14,7 +14,8 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 
 // VERSION
-const VERSION = "1.0.11";
+const VERSION = "1.0.11"; // Not used anymore. Use int VSN
+const VSN = 1; 
 
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
@@ -283,7 +284,7 @@ app.post('/auth', authToken, async (req, res) => {
 
         const rawRecentActivity = await Activity.find({people: req.userId})
         .sort({ timestamp: -1 })
-        .limit(10);
+        .limit(20);
         // For optimization, save people that have already been searched when going thru people in activity
         const allPeopleDetails = {};
 
@@ -367,7 +368,8 @@ app.post('/auth', authToken, async (req, res) => {
             status: 'success',
             userInfo, 
             fullLocalUser,
-            version: VERSION,
+            version: VERSION, // Not used anymore
+            vsn: VSN,
         });
     } catch(err) {
         console.error(err);
