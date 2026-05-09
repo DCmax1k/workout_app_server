@@ -269,6 +269,18 @@ router.post('/logpastworkout', authToken, async (req, res) => {
         pastWorkouts.unshift(data);
         user.pastWorkouts = pastWorkouts;
         user.markModified("pastWorkouts");
+
+        const completedExercises = user.completedExercises;
+        pastWorkouts.exercises.forEach(ex => {
+            if (completedExercises[ex.id]) {
+                completedExercises[ex.id].push(ex);
+            } else {
+                completedExercises[ex.id] = [ex];
+            }
+        })
+        user.completedExercises = completedExercises;
+        user.markModified("completedExercises");
+        
         await user.save();
         
         res.json({status: "success", });
