@@ -271,7 +271,7 @@ router.post('/logpastworkout', authToken, async (req, res) => {
         user.markModified("pastWorkouts");
 
         const completedExercises = user.completedExercises;
-        pastWorkouts.exercises.forEach(ex => {
+        data.exercises.forEach(ex => {
             if (completedExercises[ex.id]) {
                 completedExercises[ex.id].push(ex);
             } else {

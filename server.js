@@ -447,23 +447,23 @@ app.post('/save-push-token', authToken, async (req, res) => {
     }
 });
 
-app.get('/setcompletedexercises', authToken, async (req, res) => {
-    const allUsers = await User.find();
-    await Promise.all(allUsers.map(async u => {
-        const allCompleted = {};
-        u.pastWorkouts.forEach(pw => {
-            pw.exercises.forEach(ex => {
-                if (allCompleted[ex.id]) {
-                allCompleted[ex.id].push(ex);
-            } else {
-                allCompleted[ex.id] = [ex];
-            }
-            })
-        });
-        await User.findByIdAndUpdate(u._id, {completedExercises: allCompleted})
-    }));
-    res.json({"status": "success"});
-})
+// app.get('/setcompletedexercises', authToken, async (req, res) => {
+//     const allUsers = await User.find();
+//     await Promise.all(allUsers.map(async u => {
+//         const allCompleted = {};
+//         u.pastWorkouts.forEach(pw => {
+//             pw.exercises.forEach(ex => {
+//                 if (allCompleted[ex.id]) {
+//                 allCompleted[ex.id].push(ex);
+//             } else {
+//                 allCompleted[ex.id] = [ex];
+//             }
+//             })
+//         });
+//         await User.findByIdAndUpdate(u._id, {completedExercises: allCompleted})
+//     }));
+//     res.json({"status": "success"});
+// })
 //sendNotification("ExponentPushToken[odAI9NHMeQD0ZuleqKSefG]", "Test Notification", "This is a test notification from the backend!", "Extra data goes here!");
 //requestSendPushNotification([{token: "ExponentPushToken[odAI9NHMeQD0ZuleqKSefG]", active: false, deviceInfo: null}], "Test Notification", "This is a test notification from the backend!", "Extra data goes here!");
 
