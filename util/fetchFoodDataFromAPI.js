@@ -38,7 +38,7 @@ const fetchFoodDataFromAPI = async (barcode) => {
             calcium: (data.product.nutriments?.calcium_serving || 0) / dataToStore.quantity,
             iron: (data.product.nutriments?.iron_serving || 0) / dataToStore.quantity,
         };
-        if (isNaN(nutrition["calories"]) || nutrition["calories"] <= 0) {
+        if (isNaN(nutrition["calories"]) || nutrition["calories"] === undefined || nutrition["calories"] === null) {
             dataToStore.quantity = 100/10;
             dataToStore.unit = 'g'
             nutrition = {
