@@ -12,8 +12,18 @@ const searchUsers = (search="", users=[]) => {
   });
 }
 
+const formatUnitValue = (value, quantity, unit) => {
+  let response = parseInt(quantity*value*100)/100;
+  let newUnit = unit;
+  if (response < 1) {
+    response*=1000;
+    newUnit = "m"+unit;
+  }
+  return `${response}${newUnit}`
+}
+
 // Logged in
-const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupportTickets, ...props}) => {
+const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupportTickets, barcodeFoods, setBarcodeFoods, ...props}) => {
   const navigate = useNavigate();
 
   const [searchValue, setSearchValue] = useState("");
@@ -23,7 +33,7 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
   const [prefixColorValue, setPrefixColorValue] = useState("");
   const [passwordValue, setPasswordValue] = useState("");
 
-  const [page, setPage] = useState(0); // 0 users, 1 support tickets
+  const [page, setPage] = useState(0); // 0 users, 1 support tickets, 2 dev,  3 barcode foods
 
   const [usernameToConfigure, setUsernameToConfigure] = useState("");
   const [configuration, setConfiguration] = useState("");
@@ -238,38 +248,23 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
       
       <input value={searchValue} onInput={(e) => setSearchValue(e.target.value)} style={{outline: "none", border: "none", backgroundColor: "#b4b4b4ff", padding: 5, borderRadius: 5}} placeholder='Search user' />
       
-      {/* Pages: 0 - users, 1 - support tickets, 2 - configure users */}
-      {page === 0 ? (
-        <div style={{display: "flex", gap: 10, width: "100%"}}>
-          <div className='button' onClick={() => {setPage(1)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
-            New Support Tickets: {supportTickets.filter(t => !t.dismissed).length}
-          </div>
-          <div className='button' onClick={() => {setPage(2)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
-            DEV
-          </div>
-        </div>
-        
-        
-      ) : page === 1 ? (
-        <div style={{display: "flex", gap: 10, width: "100%"}}>
-          <div className='button' onClick={() => {setPage(0)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
-              Show Users: {users.length}
-          </div>
-          <div className='button' onClick={() => {setPage(2)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
-            DEV
-          </div>
-        </div>
-      ) : page === 2 ? (
-        <div style={{display: "flex", gap: 10, width: "100%"}}>
-          <div className='button' onClick={() => {setPage(0)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
-              Show Users: {users.length}
-          </div>
-          <div className='button' onClick={() => {setPage(1)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
-            New Support Tickets: {supportTickets.filter(t => !t.dismissed).length}
-          </div>
-        </div>
-      ) : null}
-      
+      {/* Buttons for each page */}
+      {/* Pages: 0 - users, 1 - support tickets, 2 - dev, 3 barcode things */}
+      <div style={{display: "flex", gap: 10, width: "100%"}}>
+        {Array(4).fill(null).map((_, i) => {
+          const allUsersName = "All Users: " + users.length;
+          const supportTicketsName = "New Support Tickets: " + supportTickets.filter(t => !t.dismissed).length;
+          const barcodeName = "Barcode Foods: " + barcodeFoods.length;
+          const name = [allUsersName, supportTicketsName, barcodeName, "DEV"][i];
+          return page === i ? null : (
+            <div key={i} className='button' onClick={() => {setPage(i)}} style={{marginTop: 10, marginBottom: 5, alignSelf: "flex-start"}}>
+              {name}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Actual pages for them */}
       {page === 0 ? (
         <div className='scrollview' style={{backgroundColor: "#444444ff", borderRadius: "1vh", padding: "2vh", marginTop: 10 }}>
             <div style={{padding: 10, marginBottom: 5, cursor: "pointer", width: "100%", fontSize: "1.4vh"}}>
@@ -317,6 +312,54 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
         </div>
       ) : page === 2 ? (
         <div className='scrollview' style={{backgroundColor: "#444444ff", borderRadius: "1vh", padding: "2vh", marginTop: 10 }}>
+          <div style={{padding: 10, marginBottom: 5, width: "100%", fontSize: "1.4vh"}}>
+            All Barcode Foods:
+          </div>
+          {barcodeFoods.map((data, i) => {
+            const backgroundColor = data.verified ? "transparent" : "#2ee36a80";
+            const food = data.data;
+            const title = food.name;
+            let user = {username: "user"};
+            if (data.ownerId) {
+              user = users.find(u => u._id === data.ownerId);
+            }
+            return (
+              <div key={data._id} style={{padding: 10, borderTop: "2px solid grey", marginBottom: 5, width: "100%", fontSize: "2vh", display: "flex", flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <div style={{padding: 20, borderRadius: 10, display: "flex", flexDirection: "column", flex: 1, gap: 5, backgroundColor}}>
+                  <p style={{fontSize: 18,}}>{title}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>For {food.quantity} {food.unit}</p>
+
+                  <div style={{display: "flex", flexDirection: "row", alignItems: "center", gap: 5}}>
+                    <div style={{height: 40, width: 40, borderRadius: 9999, overflow: 'hidden', position: "relative",}}>
+                      <img style={{height: "100%", width: "100%", objectFit: "cover"}} src={user.profileImg.url || "/images/icons/profileIcon.png"} alt='profile img' />   
+                    </div>
+                    <p style={{color: user.premium ? "#94A7F3" : "white"}}>{user.username}</p>
+                  </div>
+                 
+                  <p style={{fontSize: 12, fontWeight: "300",}}>{new Date(data.dateAdded).toLocaleDateString()}</p>
+                  
+                  {/* <button onClick={() => {removeBarcode(data._id)}} style={{width: 100}}>{data. ? "Recover" : "Remove"}</button> */}
+                </div>
+                <div style={{padding: 20, borderRadius: 10, display: "flex", flexDirection: "column", flex: 1, gap: 5, backgroundColor}}>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Cal: {food.quantity*parseInt(food.nutrition.calories*100)/100}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Pro: {food.quantity*parseInt(food.nutrition.protein*100)/100}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Carb: {food.quantity*parseInt(food.nutrition.carbs*100)/100}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Fat: {food.quantity*parseInt(food.nutrition.fat*100)/100}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Fiber: {food.quantity*parseInt(food.nutrition.fiber*100)/100}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Suger: {food.quantity*parseInt(food.nutrition.sugar*100)/100}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Sodium: {formatUnitValue(food.nutrition.sodium, food.quantity, food.unit)}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Vit A: {formatUnitValue(food.nutrition.vitaminA, food.quantity, food.unit)}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Vit C: {formatUnitValue(food.nutrition.vitaminC, food.quantity, food.unit)}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Calcium: {formatUnitValue(food.nutrition.calcium, food.quantity, food.unit)}</p>
+                  <p style={{fontSize: 12, fontWeight: "300",}}>Iron: {formatUnitValue(food.nutrition.iron, food.quantity, food.unit)}</p>
+                </div>
+              </div>
+            )
+          })}
+          
+        </div>
+      ) : page === 3 ? (
+        <div className='scrollview' style={{backgroundColor: "#444444ff", borderRadius: "1vh", padding: "2vh", marginTop: 10 }}>
           <h1>Add configuration to users.</h1>
           <h3>User - Leave blank to apply to all users</h3>
           <input 
@@ -351,6 +394,7 @@ const Admin = () => {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState(null);
   const [supportTickets, setSupportTickets] = useState([]);
+  const [barcodeFoods, setBarcodeFoods] = useState([]);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -358,7 +402,7 @@ const Admin = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const checkAuth = async () => {
-      //const response = { "status": "success", "user": { "_id": "690eaddde44f134e30e11257", "username": "test", "usernameDecoration": { "prefix": "", "prefixColor": "#000000", "description": "Or description here" }, "profileImg": { "url": "", "public_id": "" }, "premium": false, "pastWorkoutsLength": 15 }, "users": [ { "profileImg": { "url": "", "public_id": "" }, "_id": "690295af9feed1676b9c407f", "username": "DCmax1k", "verifyEmailCode": "541400", "rank": "user", "premium": true, "friends": [ "690eaddde44f134e30e11257" ], "trouble": { "bans": [], "frozen": false }, "usernameDecoration": { "prefix": "LOCAL", "prefixColor": "#ffe224" }, "extraDetails": { "ai": { "image": { "used": 0, "credits": 6, "lastReset": 1766118872737 } }, "preferences": { "liftUnit": "imperial", "heightUnit": "imperial", "distanceUnit": "imperial", "systemTheme": "dark", "restTimerAmount": 120, "workouts": true, "achievements": true } } }, { "profileImg": { "url": "https://res.cloudinary.com/dxpmmy0ig/image/upload/v1765248986/profileImages/tpumbvjyhxxfhbnsn8jk.jpg", "public_id": "profileImages/tpumbvjyhxxfhbnsn8jk" }, "_id": "690eaddde44f134e30e11257", "username": "test", "verifyEmailCode": "321311", "rank": "admin", "premium": false, "friends": [ "690295af9feed1676b9c407f" ], "trouble": { "bans": [], "frozen": false }, "usernameDecoration": { "prefix": "", "prefixColor": "#000000", "description": "Or description here" }, "extraDetails": { "ai": { "image": { "used": 41, "lastReset": 1764393189879, "credits": 6 }, "foodText": { "credits": 9, "lastReset": 1764393189879, "used": 18 } }, "preferences": { "liftUnit": "imperial", "heightUnit": "imperial", "distanceUnit": "imperial", "systemTheme": "dark", "restTimerAmount": 120, "workouts": false, "achievements": true } } } ], "supportTickets": [ { "_id": "695b08ab6836588399249d3e", "userId": "690295af9feed1676b9c407f", "email": "dylan@digitalcaldwell.com", "type": "generalsupport", "data": { "subject": "Generally speaking", "message": "this is a general message" }, "dismissed": false, "timestamp": "2026-01-05T00:41:15.875Z", "__v": 0 }, { "_id": "695b087a6836588399249d3c", "userId": "690295af9feed1676b9c407f", "email": "dylan@digitalcaldwell.com", "type": "requestfeature", "data": { "subject": "New feature bruh", "message": "Itd be sick if you did this" }, "dismissed": false, "timestamp": "2026-01-05T00:40:26.147Z", "__v": 0 }, { "_id": "695b0808144fa26e27dbb54f", "userId": "690295af9feed1676b9c407f", "email": "dylan@digitalcaldwell.com", "type": "reportabug", "data": { "subject": "Bug / Crash", "message": "This is a bug.\nCrazy bug that happened here" }, "dismissed": false, "timestamp": "2026-01-05T00:38:32.617Z", "__v": 0 } ] }
+      //const response = { "status": "success", "user": { "_id": "690eaddde44f134e30e11257", "username": "test", "usernameDecoration": { "prefix": "", "prefixColor": "#000000", "description": "Or description here" }, "profileImg": { "url": "", "public_id": "" }, "premium": false, "pastWorkoutsLength": 15 }, "users": [ { "profileImg": { "url": "", "public_id": "" }, "_id": "690295af9feed1676b9c407f", "username": "DCmax1k", "verifyEmailCode": "541400", "rank": "user", "premium": true, "friends": [ "690eaddde44f134e30e11257" ], "trouble": { "bans": [], "frozen": false }, "usernameDecoration": { "prefix": "LOCAL", "prefixColor": "#ffe224" }, "extraDetails": { "ai": { "image": { "used": 0, "credits": 6, "lastReset": 1766118872737 } }, "preferences": { "liftUnit": "imperial", "heightUnit": "imperial", "distanceUnit": "imperial", "systemTheme": "dark", "restTimerAmount": 120, "workouts": true, "achievements": true } } }, { "profileImg": { "url": "https://res.cloudinary.com/dxpmmy0ig/image/upload/v1765248986/profileImages/tpumbvjyhxxfhbnsn8jk.jpg", "public_id": "profileImages/tpumbvjyhxxfhbnsn8jk" }, "_id": "690eaddde44f134e30e11257", "username": "test", "verifyEmailCode": "321311", "rank": "admin", "premium": false, "friends": [ "690295af9feed1676b9c407f" ], "trouble": { "bans": [], "frozen": false }, "usernameDecoration": { "prefix": "", "prefixColor": "#000000", "description": "Or description here" }, "extraDetails": { "ai": { "image": { "used": 41, "lastReset": 1764393189879, "credits": 6 }, "foodText": { "credits": 9, "lastReset": 1764393189879, "used": 18 } }, "preferences": { "liftUnit": "imperial", "heightUnit": "imperial", "distanceUnit": "imperial", "systemTheme": "dark", "restTimerAmount": 120, "workouts": false, "achievements": true } } } ], "supportTickets": [ { "_id": "695b08ab6836588399249d3e", "userId": "690295af9feed1676b9c407f", "email": "dylan@digitalcaldwell.com", "type": "generalsupport", "data": { "subject": "Generally speaking", "message": "this is a general message" }, "dismissed": false, "timestamp": "2026-01-05T00:41:15.875Z", "__v": 0 }, { "_id": "695b087a6836588399249d3c", "userId": "690295af9feed1676b9c407f", "email": "dylan@digitalcaldwell.com", "type": "requestfeature", "data": { "subject": "New feature bruh", "message": "Itd be sick if you did this" }, "dismissed": false, "timestamp": "2026-01-05T00:40:26.147Z", "__v": 0 }, { "_id": "695b0808144fa26e27dbb54f", "userId": "690295af9feed1676b9c407f", "email": "dylan@digitalcaldwell.com", "type": "reportabug", "data": { "subject": "Bug / Crash", "message": "This is a bug.\nCrazy bug that happened here" }, "dismissed": false, "timestamp": "2026-01-05T00:38:32.617Z", "__v": 0 } ], "barcodes": [ { "_id": "69fd24a2ca9387c4a6834333", "barcode": "028400516570", "__v": 0, "data": { "name": "Doritos Flamas", "quantity": 10, "unit": "g", "description": "", "image": "https://images.openfoodfacts.net/images/products/002/840/051/6570/front_en.30.400.jpg", "nutrition": { "calories": 5.357142857142859, "protein": 0.071428571428571, "carbs": 0.6428571428571399, "fat": 0.28571428571429, "fiber": 0.035714285714286, "sugar": 0, "sodium": 0.007142857142857199, "vitaminA": 0, "vitaminC": 0, "calcium": 0, "iron": 0 } }, "dateAdded": "2026-05-07T23:47:46.314Z", "ownerId": "690eaddde44f134e30e11257", "verified": true }, { "_id": "69fbf777c602019153e17996", "barcode": "071319000272", "__v": 0, "data": { "name": "100% whole wheat bread", "quantity": 27, "unit": "g", "description": "", "image": null, "nutrition": { "calories": 2.2222222222222223, "protein": 0.1111111111111111, "carbs": 0.4074074074074074, "fat": 0.037037037037037035, "fiber": 0.07407407407407407, "sugar": 0.037037037037037035, "sodium": 0.005, "vitaminA": 0, "vitaminC": 0, "calcium": 0.0014074074074074073, "iron": 0.000037037037037037037 } }, "ownerId": "690eaddde44f134e30e11257", "verified": true, "dateAdded": "2026-05-09T14:52:05.670Z" }, { "_id": "69fbf8ebc602019153e17a4e", "barcode": "024100116072", "__v": 0, "data": { "name": "Cheezit", "quantity": 30, "unit": "g", "description": "", "image": null, "nutrition": { "calories": 5, "protein": 0.1, "carbs": 0.5666666666666667, "fat": 0.26666666666666666, "fiber": 0.03333333333333333, "sugar": 0, "sodium": 0.007666666666666667, "vitaminA": 0, "vitaminC": 0, "calcium": 0.001, "iron": 0.000033333333333333335 } }, "ownerId": "690eaddde44f134e30e11257", "verified": true, "dateAdded": "2026-05-09T14:52:05.670Z" }, { "_id": "69fbf980c602019153e17aaf", "barcode": "009542461867", "__v": 0, "data": { "name": "Dubai Style Chocolate", "quantity": 30, "unit": "g", "description": "", "image": null, "nutrition": { "calories": 5.333333333333333, "protein": 0.030000000000000002, "carbs": 0.15, "fat": 0.11, "fiber": 0, "sugar": 0.12000000000000001, "sodium": 0.00035, "vitaminA": 0, "vitaminC": 0, "calcium": 0.0005, "iron": 0.000013333333333333333 } }, "ownerId": "690eaddde44f134e30e11257", "verified": true, "dateAdded": "2026-05-09T14:52:05.670Z" } ] }
       const response = await sendData("/admin", {});
       if (response.status !== "success") {
         setErrorMessage(response.message);
@@ -368,6 +412,7 @@ const Admin = () => {
       setUsers(response.users);
       setUser(response.user);
       setSupportTickets(response.supportTickets);
+      setBarcodeFoods(response.barcodes);
     }
 
   useEffect(() => {
@@ -390,7 +435,15 @@ const Admin = () => {
 
   return user ? (
     // Admin dashboard for user
-    <LoggedInAdmin user={user} users={users} setUsers={setUsers} supportTickets={supportTickets} setSupportTickets={setSupportTickets} />
+    <LoggedInAdmin
+    user={user}
+    users={users}
+    setUsers={setUsers}
+    supportTickets={supportTickets}
+    setSupportTickets={setSupportTickets}
+    barcodeFoods={barcodeFoods}
+    
+    />
   ) : (
     // Show login for admin
     <div className="Login">

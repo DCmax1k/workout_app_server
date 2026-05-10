@@ -16,47 +16,77 @@ const fetchFoodDataFromAPI = async (barcode) => {
         if (data.status_verbose === "product not found") {
             return data;
         }
+        const nutriments = data.product.nutriments || {};
+
         const dataToStore = {
-            name:  data.product.product_name, //product_name,_en_imported,
+            name: data.product.product_name,
             quantity: parseFloat(data.product.serving_quantity) || 0,
-            unit: data.product.serving_quantity_unit || 'unit',
+            unit: data.product.serving_quantity_unit || "unit",
             description: data.product.generic_name || "",
             image: data.product.selected_images?.front?.display?.["en"] || null,
         };
-        let nutrition = {
-            calories: (data.product.nutriments?.["energy-kcal_serving"] || 0) / dataToStore.quantity,
-            protein: (data.product.nutriments?.proteins_serving || 0) / dataToStore.quantity,
-            carbs: (data.product.nutriments?.carbohydrates_serving || 0) / dataToStore.quantity,
-            fat: (data.product.nutriments?.fat_serving || 0) / dataToStore.quantity,
-            
-            // New nutrition values and vitamins/minerals
-            fiber: (data.product.nutriments?.fiber_serving || 0) / dataToStore.quantity,
-            sugar: (data.product.nutriments?.sugars_serving || 0) / dataToStore.quantity,
-            sodium: (data.product.nutriments?.sodium_serving || 0) / dataToStore.quantity,
-            vitaminA: (data.product.nutriments?.["vitamin-a_serving"] || 0) / dataToStore.quantity,
-            vitaminC: (data.product.nutriments?.["vitamin-c_serving"] || 0) / dataToStore.quantity,
-            calcium: (data.product.nutriments?.calcium_serving || 0) / dataToStore.quantity,
-            iron: (data.product.nutriments?.iron_serving || 0) / dataToStore.quantity,
-        };
-        if (isNaN(nutrition["calories"]) || nutrition["calories"] === undefined || nutrition["calories"] === null) {
-            dataToStore.quantity = 100/10;
-            dataToStore.unit = 'g'
-            nutrition = {
-                calories: ((data.product.nutriments?.["energy-kcal_100g"] || 0) / dataToStore.quantity)/10,
-                protein: ((data.product.nutriments?.["proteins_100g"] || 0) / dataToStore.quantity)/10,
-                carbs: ((data.product.nutriments?.["carbohydrates_100g"] || 0) / dataToStore.quantity)/10,
-                fat: ((data.product.nutriments?.["fat_100g"] || 0) / dataToStore.quantity)/10,
-
-                // New nutrition values and vitamins/minerals
-                fiber: ((data.product.nutriments?.["fiber_100g"] || 0) / dataToStore.quantity)/10,
-                sugar: ((data.product.nutriments?.["sugars_100g"] || 0) / dataToStore.quantity)/10,
-                sodium: ((data.product.nutriments?.["sodium_100g"] || 0) / dataToStore.quantity)/10,
-                vitaminA: ((data.product.nutriments?.["vitamin-a_100g"] || 0) / dataToStore.quantity)/10,
-                vitaminC: ((data.product.nutriments?.["vitamin-c_100g"] || 0) / dataToStore.quantity)/10,
-                calcium: ((data.product.nutriments?.["calcium_100g"] || 0) / dataToStore.quantity)/10,
-                iron: ((data.product.nutriments?.["iron_100g"] || 0) / dataToStore.quantity)/10,
+        // Detect best nutrition mode
+        let nutritionMode = null;
+        // Priority:
+        // 1. serving
+        // 2. prepared_serving
+        // 3. 100g
+        // 4. prepared_100g
+        if (nutriments["energy-kcal_serving"] != null) {
+            nutritionMode = "serving";
+        }
+        else if (nutriments["energy-kcal_prepared_serving"] != null) nutritionMode = "prepared_serving";
+        else if (nutriments["energy-kcal_100g"] != null) nutritionMode = "100g";
+        else if (nutriments["energy-kcal_prepared_100g"] != null) nutritionMode = "prepared_100g";
+        // Fallback quantities for 100g modes
+        if (
+            (nutritionMode === "100g" || nutritionMode === "prepared_100g") &&
+            (!dataToStore.quantity || dataToStore.quantity <= 0)
+        ) {
+            dataToStore.quantity = 10;
+            dataToStore.unit = "g";
+        }
+        // Helper function
+        function getNutritionValue(baseKey) {
+            let value = 0;
+            switch (nutritionMode) {
+                case "serving":
+                    value = nutriments[`${baseKey}_serving`] || 0;
+                    // convert serving -> per 1 unit
+                    return dataToStore.quantity > 0 ? value / dataToStore.quantity : value;
+                case "prepared_serving":
+                    value = nutriments[`${baseKey}_prepared_serving`] || 0;
+                    // convert serving -> per 1 unit
+                    return dataToStore.quantity > 0 ? value / dataToStore.quantity : value;
+                case "100g":
+                    value = nutriments[`${baseKey}_100g`] || 0;
+                    // convert per100g -> per1g
+                    return value / 100;
+                case "prepared_100g":
+                    value = nutriments[`${baseKey}_prepared_100g`] || 0;
+                    // convert per100g -> per1g
+                    return value / 100;
+                default:
+                    return 0;
             }
         }
+
+        const nutrition = {
+            calories: getNutritionValue("energy-kcal"),
+            protein: getNutritionValue("proteins"),
+            carbs: getNutritionValue("carbohydrates"),
+            fat: getNutritionValue("fat"),
+
+            // New nutrition values and vitamins/minerals
+            fiber: getNutritionValue("fiber"),
+            sugar: getNutritionValue("sugars"),
+            sodium: getNutritionValue("sodium"),
+            vitaminA: getNutritionValue("vitamin-a"),
+            vitaminC: getNutritionValue("vitamin-c"),
+            calcium: getNutritionValue("calcium"),
+            iron: getNutritionValue("iron"),
+        };
+
         dataToStore.nutrition = nutrition;
 
         return dataToStore;

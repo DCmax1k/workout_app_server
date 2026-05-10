@@ -1,13 +1,15 @@
 const express = require('express');
 const authToken = require('../util/authToken');
 const bcrypt = require('bcrypt');
-const User = require('../models/User');
 const getUserInfo = require('../util/getUserInfo');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const Support = require('../models/Support');
 const { sendMessageConfirmation } = require('../util/sendEmail');
 const generateUniqueId = require('../util/uniqueId');
+
+const User = require('../models/User');
+const Support = require('../models/Support');
+const BarcodeFood = require('../models/BarcodeFood');
 
 // Check auth initially
 router.post('/', authToken, async (req, res) => {
@@ -23,13 +25,16 @@ router.post('/', authToken, async (req, res) => {
         const supportTickets = await Support.find({})
             .sort({ timestamp: -1 })
             .limit(50);
-
+        const barcodes = await BarcodeFood.find({})
+            .sort({dateAdded: -1});
+        
 
         return res.json({
             status: 'success',
             user: {...getUserInfo(user)},
             users,
             supportTickets,
+            barcodes,
         });
 
     } catch(err) {
@@ -74,12 +79,15 @@ router.post('/login', async (req, res) => {
         const supportTickets = await Support.find({})
             .sort({ timestamp: -1 })
             .limit(50);
+        const barcodes = await BarcodeFood.find({})
+            .sort({dateAdded: -1});
         
         return res.json({
             status: 'success',
             user: {...getUserInfo(user)},
             users,
             supportTickets,
+            barcodes,
         });
     } catch(err) {
         console.error(err);
