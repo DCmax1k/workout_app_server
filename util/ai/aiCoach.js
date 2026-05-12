@@ -15,7 +15,7 @@ const responseSchema = {
   required: ["message"]
 };
 
-const aiCoach = async ({ userPrompt, history = [], aiContext }) => {
+const aiCoach = async ({ userPrompt, history = [], aiContext, aiModel = "gemini-2.5-flash-lite" }) => {
   const { profile, specs } = aiContext;
 
   const userDataString = `
@@ -35,7 +35,7 @@ const aiCoach = async ({ userPrompt, history = [], aiContext }) => {
 
   try {
     const result = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite", // Updated to the current 2026 model
+      model: aiModel, // Updated to the current 2026 model
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema, 
@@ -71,6 +71,10 @@ const aiCoach = async ({ userPrompt, history = [], aiContext }) => {
 
   } catch (error) {
     console.error("Gemini 2.5 API Error:", error);
+    // CHECK FOR 503 ERROR
+    if (error.status === 503 || error.response?.status === 503) {
+        return { isOverloaded: true };
+    }
     throw error;
   }
 };

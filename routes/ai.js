@@ -156,6 +156,7 @@ router.post("/analyzefoodtext", authToken, async (req, res) => {
 
 router.post("/aicoach", authToken, async (req, res) => {
   try {
+
     const { userPrompt, chatId, userContextClient, userSpecs } = req.body;
     const user = await User.findById(req.userId);
 
@@ -192,11 +193,31 @@ router.post("/aicoach", authToken, async (req, res) => {
     }));
 
     // 2. Call your Gemini function (passing the history)
-    const aiResponse = await aiCoach({ 
+    let aiResponse = await aiCoach({ 
         userPrompt, 
         history: historyForAI,
-        aiContext
+        aiContext,
     });
+
+
+    // CONDITION FOR OVERLOADED SERVERS
+    if (aiResponse.isOverloaded) {
+        // Attempt another model
+        console.log("Attempting gemini 3.1 model since overloaded.")
+        aiResponse = await aiCoach({ 
+            userPrompt, 
+            history: historyForAI,
+            aiContext,
+            aiModel: "gemini-3.1-flash-lite"
+        });
+        if (aiResponse.isOverloaded) {
+          return res.json({ 
+            status: "error", 
+            message: "Too many other users are questioning me at the moment, please try again in 1 minute." 
+          });
+        }
+        
+    }
 
     const coachText = aiResponse.message;
 
