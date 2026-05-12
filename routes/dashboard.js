@@ -1076,4 +1076,23 @@ router.post('/fetchbarcode', authToken, async (req, res) => {
 });
 
 
+router.post('/setaiprofile', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        
+        if (!user) return res.json({ status: "error", message: "User not found" });
+
+        const  { goals, experience, limitations } = req.body;
+        await User.findByIdAndUpdate(req.userId, {
+            $set: {
+                'extraDetails.aiProfile': { goals, experience, limitations }
+            }
+        });
+        res.json({status: "success"});
+    } catch(err) {
+        console.error(err);
+        res.json({ status: "error", message: "Internal server error" });
+    }
+});
+
 module.exports = router;

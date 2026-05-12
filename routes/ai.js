@@ -10,6 +10,8 @@ const analyzeFoodGemini = require('../util/ai/analyzeFoodGemini');
 const analyzeFoodOpenAi = require('../util/ai/analyzeFoodOpenAi');
 const analyzeFoodTextOpenAi = require('../util/ai/analyzeFoodTextOpenAi');
 const analyzeFoodTextGemini = require('../util/ai/analyseFoodTextGemini');
+const AICoachChat = require('../models/AICoachChat');
+const aiCoach = require('../util/ai/aiCoach');
 
 // TESTING ROUTE
 router.get('/testai', (req, res) => {
@@ -149,6 +151,73 @@ router.post("/analyzefoodtext", authToken, async (req, res) => {
   } catch(err) {
     console.error(err);
     res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+});
+
+router.post("/aicoach", authToken, async (req, res) => {
+  try {
+    const { userPrompt, chatId, userContextClient, userSpecs } = req.body;
+    const user = await User.findById(req.userId);
+
+    if (!user) return res.json({ status: "error", message: "User not found" });
+    if (!user.premium) return res.json({ status: "error", message: "Premium required!" });
+
+    const aiContext = {
+      profile: userContextClient || user.extraDetails?.aiProfile || {},
+      specs: userSpecs || {} // height, weight, age, gender
+    };
+
+    let currentChat;
+
+    console.log("Chat id ", chatId);
+    if (chatId) {
+      // Scenario: Existing Chat
+      console.log("Exitsting chat");
+      currentChat = await AICoachChat.findOne({ _id: chatId, userId: user._id });
+      if (!currentChat) return res.json({ status: "error", message: "Chat not found" });
+    } else {
+      // Scenario: First message, create new chat
+      console.log("First chat");
+      currentChat = new AICoachChat({
+        userId: user._id,
+        title: userPrompt.substring(0, 30) + "...", // Auto-generate title from first prompt
+        messages: []
+      });
+    }
+
+    // 1. Prepare history for Gemini (excluding timestamps/mongo IDs)
+    const historyForAI = currentChat.messages.map(m => ({
+      role: m.role,
+      parts: m.parts
+    }));
+
+    // 2. Call your Gemini function (passing the history)
+    const aiResponse = await aiCoach({ 
+        userPrompt, 
+        history: historyForAI,
+        aiContext
+    });
+
+    const coachText = aiResponse.message;
+
+    // 3. Update DB with the new exchange
+    const userMessage = { role: "user", parts: [{ text: userPrompt }] };
+    // Store the response text, not the whole JSON object, in your history
+    const modelMessage = { role: "model", parts: [{ text: coachText }] };
+
+    currentChat.messages.push(userMessage, modelMessage);
+    await currentChat.save();
+
+    // 4. Send back the analysis and the chatId (so the client can use it for the next message)
+    res.json({ 
+      status: "success", 
+      analysis: coachText, 
+      chatId: currentChat._id 
+    });
+
+  } catch (err) {
+    console.error("Coach Error:", err);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
   }
 });
 

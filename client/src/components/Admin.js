@@ -13,7 +13,7 @@ const searchUsers = (search="", users=[]) => {
 }
 
 const formatUnitValue = (value, quantity, unit) => {
-  let response = parseInt(quantity*value*100)/100;
+  let response = parseInt(quantity*value*1000)/1000;
   let newUnit = unit;
   if (response < 1) {
     response*=1000;
