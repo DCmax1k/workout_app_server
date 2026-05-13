@@ -312,5 +312,41 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
   }
 });
 
+router.post("/chathistory", authToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.json({status: "error", message: "User not found"});
+
+    const chats = await AICoachChat.find({userId: user._id}, {dateCreated: 1, messages: 1, title: 1, })
+      .sort({ dateCreated: -1 })
+    return res.json({status: "success", chats});
+
+  } catch(err) {
+    console.error(err);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
+  }
+});
+
+router.post("/clearchathistory", authToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.json({ status: "error", message: "User not found" });
+
+    // Delete all chats where the userId matches
+    const result = await AICoachChat.deleteMany({ userId: user._id });
+
+    return res.json({ 
+      status: "success", 
+      message: "Chat history cleared", 
+      deletedCount: result.deletedCount 
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
+  }
+});
+
+
 
 module.exports = router;

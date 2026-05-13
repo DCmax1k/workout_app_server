@@ -14,7 +14,8 @@ const AICoachChatSchema = new mongoose.Schema({
         {
             role: { type: String, enum: ['user', 'model'], required: true },
             parts: [{ text: { type: String, required: true } }],
-            timestamp: { type: Date, default: Date.now }
+            timestamp: { type: Date, default: Date.now },
+            data: { type: Object, default: null }
         }
     ],
     dateCreated: {
