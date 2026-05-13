@@ -225,7 +225,7 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
       aiContext.totalNutritionForAI = currentChat.totalNutritionForAI;
     } else {
       // Scenario: First message, create new chat and find workout / nutrition data only this once
-      aiContext.workoutsForAI = JSON.stringify(user.pastWorkouts.slice(-3).map(wk => {
+      aiContext.workoutsForAI = JSON.stringify(user.pastWorkouts.slice(3).map(wk => {
         const exercisesArray = wk.exercises.map(ex => {
           return {name: ex.name, sets: ex.sets, unit: ex.unit || user.extraDetails.preferences.liftUnit || "imperial"};
         });
@@ -234,19 +234,31 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
           exercises: exercisesArray,
         }
       }));
-      aiContext.totalNutritionForAI = JSON.stringify(Object.keys(user.consumedMeals).slice(-7).map(k => {
-        const meals = user.consumedMeals[k];
-        const totals = meals.reduce((acc, { totalNutrition: cur }) => ({
-          calories: acc.calories + cur.calories,
-          protein: acc.protein + cur.protein,
-          carbs: acc.carbs + cur.carbs,
-          fat: acc.fat + cur.fat,
-        }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
-        return {
-          date: k,
-          dailyTotals: totals,
-        }
-      }));
+      aiContext.totalNutritionForAI = JSON.stringify(
+        Object.keys(user.consumedMeals).slice(-7).map(k => {
+          const meals = user.consumedMeals[k];
+          const daySummary = meals.reduce((acc, meal) => {
+            const cur = meal.totalNutrition;
+            acc.calories += cur.calories;
+            acc.protein += cur.protein;
+            acc.carbs += cur.carbs;
+            acc.fat += cur.fat;
+            const mealFoodNames = meal.fullMeal.foods.map(f => f.name);
+            acc.foodList.push(...mealFoodNames);
+            return acc;
+          }, { calories: 0, protein: 0, carbs: 0, fat: 0, foodList: [] });
+          return {
+            date: k,
+            dailyTotals: {
+              calories: daySummary.calories,
+              protein: daySummary.protein,
+              carbs: daySummary.carbs,
+              fat: daySummary.fat
+            },
+            foods: daySummary.foodList.join(", ")
+          };
+        })
+      );
       currentChat = new AICoachChat({
         userId: user._id,
         title: userPrompt.substring(0, 30) + "...", // Auto-generate title from first prompt
