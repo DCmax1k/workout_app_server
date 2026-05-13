@@ -271,7 +271,7 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
         userId: user._id,
         title: user.username + " - Coach AI chat", // Auto-generate title from first prompt
         messages: [
-          { role: "model", parts: [{ text: randomFirstMessage ?? "" }] }
+          { role: "model", parts: [{ text: randomFirstMessage ?? "None" }] }
         ],
         workoutsForAI: aiContext.workoutsForAI,
         totalNutritionForAI: aiContext.totalNutritionForAI,
