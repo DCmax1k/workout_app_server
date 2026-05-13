@@ -197,7 +197,7 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
     // })
 
 
-    const { userPrompt, chatId, userContextClient, userSpecs } = req.body;
+    const { userPrompt, chatId, userContextClient, userSpecs, randomFirstMessage } = req.body;
     if (!userPrompt.trim()) return res.json({status: "success", analysis: "You didn't say anything..."});
     const user = await User.findById(req.userId);
 
@@ -224,16 +224,23 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
       aiContext.workoutsForAI = currentChat.workoutsForAI;
       aiContext.totalNutritionForAI = currentChat.totalNutritionForAI;
     } else {
-      // Scenario: First message, create new chat and find workout / nutrition data only this once
+      // Scenario: First message, create new chat
+       // find workout data (last 3 workouts)
       aiContext.workoutsForAI = JSON.stringify(user.pastWorkouts.slice(3).map(wk => {
         const exercisesArray = wk.exercises.map(ex => {
-          return {name: ex.name, sets: ex.sets, unit: ex.unit || user.extraDetails.preferences.liftUnit || "imperial"};
+          const newSets = ex.sets.map(set => {
+            const newSet = set;
+            delete newSet.complete;
+            return newSet;
+          })
+          return {name: ex.name, sets: newSets, unit: ex.unit || user.extraDetails.preferences.liftUnit || "imperial"};
         });
         return {
           date: new Date(wk.time).toLocaleDateString(),
           exercises: exercisesArray,
         }
       }));
+      // find nutrition data (last 7 days)
       aiContext.totalNutritionForAI = JSON.stringify(
         Object.keys(user.consumedMeals).slice(-7).map(k => {
           const meals = user.consumedMeals[k];
@@ -259,10 +266,13 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
           };
         })
       );
+      // Create db object
       currentChat = new AICoachChat({
         userId: user._id,
-        title: userPrompt.substring(0, 30) + "...", // Auto-generate title from first prompt
-        messages: [],
+        title: user.username + " - Coach AI chat", // Auto-generate title from first prompt
+        messages: [
+          { role: "model", parts: [{ text: randomFirstMessage ?? "" }] }
+        ],
         workoutsForAI: aiContext.workoutsForAI,
         totalNutritionForAI: aiContext.totalNutritionForAI,
       });
