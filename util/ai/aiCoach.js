@@ -16,7 +16,10 @@ const responseSchema = {
 };
 
 const aiCoach = async ({ userPrompt, history = [], aiContext, aiModel = "gemini-2.5-flash-lite" }) => {
-  const { profile, specs } = aiContext;
+  const { profile, specs, workoutsForAI, totalNutritionForAI } = aiContext;
+
+  // console.log("Workouts added to prompt ", workoutsForAI);
+  // console.log("Food added to prompt: ", totalNutritionForAI);
 
   const userDataString = `
     USER BIOMETRICS:
@@ -29,6 +32,16 @@ const aiCoach = async ({ userPrompt, history = [], aiContext, aiModel = "gemini-
     - Goals: ${profile.goals || "Not specified"}
     - Experience Level: ${profile.experience || "Not specified"}
     - Limitations/Injuries: ${profile.limitations || "None reported"}
+
+    CURRENT DATE:
+    - ${new Date().toLocaleDateString()}
+
+    LAST THREE WORKOUTS COMPLETED:
+    - ${workoutsForAI}
+
+    TOTAL NUTRITION VALUES OVER PAST 7 DAYS:
+    - ${totalNutritionForAI}
+
   `;
 
   const dynamicInstructions = `${instructions.coach}\n\n${userDataString}`;

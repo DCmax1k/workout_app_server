@@ -20,6 +20,14 @@ const AICoachChatSchema = new mongoose.Schema({
     dateCreated: {
         type: Date,
         default: Date.now,
+    },
+    workoutsForAI: { // string of data for workout 
+        type: String,
+        default: null,
+    },
+    totalNutritionForAI: { // string of data for nutrition values
+        type: String,
+        default: null,
     }
 });
 

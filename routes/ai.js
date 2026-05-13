@@ -5,6 +5,7 @@ const User = require('../models/User');
 const getUserInfo = require('../util/getUserInfo');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 
 const analyzeFoodGemini = require('../util/ai/analyzeFoodGemini');
 const analyzeFoodOpenAi = require('../util/ai/analyzeFoodOpenAi');
@@ -154,35 +155,104 @@ router.post("/analyzefoodtext", authToken, async (req, res) => {
   }
 });
 
-router.post("/aicoach", authToken, async (req, res) => {
+const coachLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  limit: 10, // Limit each IP to 10 requests per window
+  message: {
+    status: "error",
+    message: "Too many requests sent, please allow your coach to cooldown a moment..."
+  },
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  // If you want to limit by User ID instead of IP (since you use authToken):
+  keyGenerator: (req) => req.userId || req.ip,
+  statusCode: 200,
+  validate: false,
+});
+
+const getTotalNutrition = (meal) => {
+    const mealNutrition = {
+        "calories": 0,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 0
+    };
+    meal.foods.forEach(f => {
+        new Array(4).fill(null).map((_, i) => {
+            const nutritionKey = ["calories", "protein", "carbs", "fat"][i];
+            mealNutrition[nutritionKey] += f.nutrition[nutritionKey]*f.quantity;
+        });
+    });
+    return mealNutrition;
+}
+router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
   try {
 
+    // await new Promise((res, rej) => {
+    //   setTimeout(res, 3000)
+    // });
+    // return res.json({
+    //   status: "success",
+    //   message: "hello",
+    // })
+
+
     const { userPrompt, chatId, userContextClient, userSpecs } = req.body;
+    if (!userPrompt.trim()) return res.json({status: "success", analysis: "You didn't say anything..."});
     const user = await User.findById(req.userId);
 
     if (!user) return res.json({ status: "error", message: "User not found" });
     if (!user.premium) return res.json({ status: "error", message: "Premium required!" });
 
+
     const aiContext = {
       profile: userContextClient || user.extraDetails?.aiProfile || {},
-      specs: userSpecs || {} // height, weight, age, gender
+      specs: userSpecs || {}, // height, weight, age, gender'
+      workoutsForAI: null,
+      totalNutritionForAI: null,
     };
 
-    let currentChat;
 
-    console.log("Chat id ", chatId);
+
+    let currentChat;
+    console.log("Chat from ", user.username);
+    console.log(userPrompt)
     if (chatId) {
       // Scenario: Existing Chat
-      console.log("Exitsting chat");
       currentChat = await AICoachChat.findOne({ _id: chatId, userId: user._id });
       if (!currentChat) return res.json({ status: "error", message: "Chat not found" });
+      aiContext.workoutsForAI = currentChat.workoutsForAI;
+      aiContext.totalNutritionForAI = currentChat.totalNutritionForAI;
     } else {
-      // Scenario: First message, create new chat
-      console.log("First chat");
+      // Scenario: First message, create new chat and find workout / nutrition data only this once
+      aiContext.workoutsForAI = JSON.stringify(user.pastWorkouts.slice(-3).map(wk => {
+        const exercisesArray = wk.exercises.map(ex => {
+          return {name: ex.name, sets: ex.sets, unit: ex.unit || user.extraDetails.preferences.liftUnit || "imperial"};
+        });
+        return {
+          date: new Date(wk.time).toLocaleDateString(),
+          exercises: exercisesArray,
+        }
+      }));
+      aiContext.totalNutritionForAI = JSON.stringify(Object.keys(user.consumedMeals).slice(-7).map(k => {
+        const meals = user.consumedMeals[k];
+        const totals = meals.reduce((acc, { totalNutrition: cur }) => ({
+          calories: acc.calories + cur.calories,
+          protein: acc.protein + cur.protein,
+          carbs: acc.carbs + cur.carbs,
+          fat: acc.fat + cur.fat,
+        }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+        return {
+          date: k,
+          dailyTotals: totals,
+        }
+      }));
       currentChat = new AICoachChat({
         userId: user._id,
         title: userPrompt.substring(0, 30) + "...", // Auto-generate title from first prompt
-        messages: []
+        messages: [],
+        workoutsForAI: aiContext.workoutsForAI,
+        totalNutritionForAI: aiContext.totalNutritionForAI,
       });
     }
 
@@ -208,7 +278,7 @@ router.post("/aicoach", authToken, async (req, res) => {
             userPrompt, 
             history: historyForAI,
             aiContext,
-            aiModel: "gemini-3.1-flash-lite"
+            aiModel: "gemini-3.1-flash-lite",
         });
         if (aiResponse.isOverloaded) {
           return res.json({ 
