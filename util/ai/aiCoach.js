@@ -33,10 +33,10 @@ const aiCoach = async ({ userPrompt, history = [], aiContext, aiModel = "gemini-
     - Experience Level: ${profile.experience || "Not specified"}
     - Limitations/Injuries: ${profile.limitations || "None reported"}
 
-    CURRENT DATE:
-    - ${new Date().toLocaleDateString()}
+    CURRENT DATE AND TIME:
+    - ${new Date()}
 
-    LAST THREE WORKOUTS COMPLETED:
+    LAST FIVE WORKOUTS COMPLETED:
     - ${workoutsForAI}
 
     TOTAL NUTRITION VALUES OVER PAST 7 DAYS:
