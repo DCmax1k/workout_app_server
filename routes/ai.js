@@ -226,7 +226,8 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
     } else {
       // Scenario: First message, create new chat
        // find workout data (last 3 workouts)
-      aiContext.workoutsForAI = JSON.stringify(user.pastWorkouts.slice(3).map(wk => {
+       const usersWorkouts = user.pastWorkouts.slice(0, 5);
+      aiContext.workoutsForAI = JSON.stringify(usersWorkouts.map(wk => {
         const exercisesArray = wk.exercises.map(ex => {
           const newSets = ex.sets.map(set => {
             const newSet = set;
