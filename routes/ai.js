@@ -270,7 +270,7 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
       // Create db object
       currentChat = new AICoachChat({
         userId: user._id,
-        title: user.username + " - Coach AI chat", // Auto-generate title from first prompt
+        title: userPrompt.substring(0, 30) + "...", // Auto-generate title from first prompt
         messages: [
           { role: "model", parts: [{ text: randomFirstMessage ?? "None" }] }
         ],
