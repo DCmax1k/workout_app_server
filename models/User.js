@@ -101,6 +101,9 @@ const UserSchema = new mongoose.Schema({
                     used: 0,
                     credits: 30,
                     lastReset: Date.now(),
+                },
+                aiCoach: {
+                    used: 0,
                 }
             },
             preferences: {
@@ -125,7 +128,11 @@ const UserSchema = new mongoose.Schema({
                 friendRequestsPush: true,
                 // .......
             },
-            updateFeedSeen: null,
+            aiProfile: {
+                goals: null,
+                experience: null,
+                limitations: null,
+            },
         },
 
     },
