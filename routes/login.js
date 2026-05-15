@@ -101,7 +101,54 @@ const createAccount = async ({partyType, thirdPartyId, username, email, password
         email,
         username: username ?? "",
         password: hashedPassword,
-        verifyEmailCode, 
+        verifyEmailCode,
+        extraDetails: {
+            ai: {
+                image: {
+                    used: 0,
+                    credits: 10,
+                    lastReset: Date.now(),
+                },
+                foodText: {
+                    used: 0,
+                    credits: 30,
+                    lastReset: Date.now(),
+                },
+                aiCoach: {
+                    used: 0,
+                },
+            },
+            preferences: {
+                liftUnit: "imperial", // metric, imperial
+                distanceUnit: "imperial", // metric, imperial
+                heightUnit: "imperial", // feet, cm
+
+                // Theme
+                systemTheme: "dark", // light, dark, system
+
+                // Workouts
+                restTimerAmount: 120, // seconds. 0 counts up, -1 disables
+
+                // Sharing
+                workouts: true,
+                achievements: true,
+
+                // Notifications
+                allPushNotifications: true,
+                friendsActivityPush: true,
+                activityReactionPush: true,
+                friendRequestsPush: true,
+                // .......
+            },
+            updateFeedSeen: null,
+            aiProfile: {
+                goals: null,
+                experience: null,
+                limitations: null,
+            },
+            aiChatHistory: {},
+
+            }, 
         ...preUser,
     });
     await user.save();

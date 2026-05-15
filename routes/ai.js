@@ -202,7 +202,12 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
     const user = await User.findById(req.userId);
 
     if (!user) return res.json({ status: "error", message: "User not found" });
-    if (!user.premium) return res.json({ status: "error", message: "Premium required!" });
+    // 5 free uses with free version
+    if (!user.premium) {
+      if (user.extraDetails.ai.aiCoach.used >= 5) {
+        return res.json({ status: "error", message: "Using the Personal AI Coach is a Premium feature. Please purchase Pumped Up Premium to gain unlimited access to exclusive features like me!" });
+      }
+    }
 
 
     const aiContext = {
@@ -311,6 +316,10 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
         }
         
     }
+
+    user.extraDetails.ai.aiCoach.used = (user.extraDetails.ai.aiCoach.used ?? 0) + 1;
+    user.markModified("extraDetails")
+    user.save();
 
     const coachText = aiResponse.message;
 
