@@ -128,6 +128,7 @@ const UserSchema = new mongoose.Schema({
                 friendRequestsPush: true,
                 // .......
             },
+            updateFeedSeen: null,
             aiProfile: {
                 goals: null,
                 experience: null,
