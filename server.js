@@ -15,7 +15,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 // VERSION
 const VERSION = "1.0.11"; // Not used anymore. Use int VSN
-const VSN = 1; 
+const VSN = 2; 
 
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
