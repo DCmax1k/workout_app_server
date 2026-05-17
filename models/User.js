@@ -168,7 +168,11 @@ const UserSchema = new mongoose.Schema({
     settings: {
         required: true,
         type: Object,
-        default: {}
+        default: {
+            birthday: null,
+            gender: null,
+            height: null
+        }
     },
     usernameDecoration: {
         required: true,
