@@ -1051,8 +1051,12 @@ router.post('/fetchbarcode', authToken, async (req, res) => {
         // 4. Hit the external API
         const apiFoodData = await fetchFoodDataFromAPI(barcode);
         
+        // Checks for product or missing nutrition information
         if (apiFoodData.status_verbose === "product not found") {
-            return res.json({ status: "success", message: "Product not found" });
+            return res.json({ status: "success", message: "Product not found", status_code: "not_found" });
+        }
+        if (apiFoodData.status_verbose === "no_nutrition") {
+            return res.json({ status: "success", message: "Product found but nutrition information is missing", status_code: "no_nutrition" });
         }
 
         // 5. Atomic Upsert to save the new item

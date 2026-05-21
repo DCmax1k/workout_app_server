@@ -455,4 +455,23 @@ router.post("/assignwarn", authToken, async (req, res) => {
     }
 });
 
+// remove barcode
+router.post("/removebarcode", authToken, async (req, res) => {
+    try {
+        const admin = await User.findById(req.userId);
+        if (admin.rank !== 'admin') {
+            return res.status(403).json({ status: 'error', message: 'Not admin.' });
+        }
+        const {barcodeId} = req.body;
+        await BarcodeFood.deleteOne
+        ({_id: barcodeId});
+        return res.json({
+            status: "success",
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal error' });
+    }
+});
+
 module.exports = router;

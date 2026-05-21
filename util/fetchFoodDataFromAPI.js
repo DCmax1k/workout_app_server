@@ -1,71 +1,66 @@
-
 const creds = process.env.FOOD_API_CREDS || "off:off";
-
-
 
 const fetchFoodDataFromAPI = async (barcode) => {
     try {
         const url = `https://world.openfoodfacts.${creds === "off:off" ? "net" : "org"}/api/v2/product/${barcode}.json`;
         console.log("Fetching food data from API for barcode: " + barcode);
         console.log("Using URL: " + url);
+        
         const response = await fetch(url, {
             method: "GET",
             headers: { Authorization: "Basic " + btoa(creds) },
         });
+        
         const data = await response.json();
+        
         if (data.status_verbose === "product not found") {
             return data;
         }
+        const rawNutriments = data.product?.nutriments;
+        const statesTags = data.product?.states_tags || [];
+        const isNutritionMissing = !rawNutriments || 
+            Object.keys(rawNutriments).length === 0 || 
+            statesTags.includes("en:nutrition-facts-to-be-completed");
+        if (isNutritionMissing) {
+            return { 
+                status_verbose: "no_nutrition",
+            };
+        }
+        
         const nutriments = data.product.nutriments || {};
 
+        // 1. Detect best nutrition mode first so we can decide on the unit naming
+        let nutritionMode = null;
+        if (nutriments["energy-kcal_serving"] != null) {
+            nutritionMode = "serving";
+        } else if (nutriments["energy-kcal_prepared_serving"] != null) {
+            nutritionMode = "prepared_serving";
+        } else if (nutriments["energy-kcal_100g"] != null) {
+            nutritionMode = "100g";
+        } else if (nutriments["energy-kcal_prepared_100g"] != null) {
+            nutritionMode = "prepared_100g";
+        }
+
+        // 2. Set default quantity to 1, and unit to "serving" or "unit"
         const dataToStore = {
             name: data.product.product_name,
-            quantity: parseFloat(data.product.serving_quantity) || 0,
-            unit: data.product.serving_quantity_unit || "unit",
+            quantity: 1, 
+            unit: (nutritionMode === "serving" || nutritionMode === "prepared_serving") ? "serving" : "unit",
             description: data.product.generic_name || "",
             image: data.product.selected_images?.front?.display?.["en"] || null,
         };
-        // Detect best nutrition mode
-        let nutritionMode = null;
-        // Priority:
-        // 1. serving
-        // 2. prepared_serving
-        // 3. 100g
-        // 4. prepared_100g
-        if (nutriments["energy-kcal_serving"] != null) {
-            nutritionMode = "serving";
-        }
-        else if (nutriments["energy-kcal_prepared_serving"] != null) nutritionMode = "prepared_serving";
-        else if (nutriments["energy-kcal_100g"] != null) nutritionMode = "100g";
-        else if (nutriments["energy-kcal_prepared_100g"] != null) nutritionMode = "prepared_100g";
-        // Fallback quantities for 100g modes
-        if (
-            (nutritionMode === "100g" || nutritionMode === "prepared_100g") &&
-            (!dataToStore.quantity || dataToStore.quantity <= 0)
-        ) {
-            dataToStore.quantity = 10;
-            dataToStore.unit = "g";
-        }
-        // Helper function
+
+        // 3. Helper function returns the raw values for that 1 serving (or 1 unit of 100g)
         function getNutritionValue(baseKey) {
-            let value = 0;
             switch (nutritionMode) {
                 case "serving":
-                    value = nutriments[`${baseKey}_serving`] || 0;
-                    // convert serving -> per 1 unit
-                    return dataToStore.quantity > 0 ? value / dataToStore.quantity : value;
+                    return nutriments[`${baseKey}_serving`] || 0;
                 case "prepared_serving":
-                    value = nutriments[`${baseKey}_prepared_serving`] || 0;
-                    // convert serving -> per 1 unit
-                    return dataToStore.quantity > 0 ? value / dataToStore.quantity : value;
+                    return nutriments[`${baseKey}_prepared_serving`] || 0;
                 case "100g":
-                    value = nutriments[`${baseKey}_100g`] || 0;
-                    // convert per100g -> per1g
-                    return value / 100;
+                    return nutriments[`${baseKey}_100g`] || 0;
                 case "prepared_100g":
-                    value = nutriments[`${baseKey}_prepared_100g`] || 0;
-                    // convert per100g -> per1g
-                    return value / 100;
+                    return nutriments[`${baseKey}_prepared_100g`] || 0;
                 default:
                     return 0;
             }
@@ -88,7 +83,7 @@ const fetchFoodDataFromAPI = async (barcode) => {
         };
 
         dataToStore.nutrition = nutrition;
-
+        
         return dataToStore;
     } catch (error) {
         console.error("Error fetching food data from API:", error);

@@ -197,6 +197,15 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
     window.open("/admin/viewuserdata?userId=" + userId, "_blank");
   }
 
+  const removeBarcode = (barcodeId) => {
+    const confirmation = window.confirm("Are you sure you want to remove this barcode food?");
+    if (confirmation) {
+      sendData("/admin/removebarcode", {barcodeId});
+      const newFoods = barcodeFoods.filter(b => b._id !== barcodeId);
+      setBarcodeFoods(newFoods);
+    }
+  }
+
   return (
     <div className='Admin' style={{width: "100%"}} {...props}>
 
@@ -249,7 +258,7 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
       <input value={searchValue} onInput={(e) => setSearchValue(e.target.value)} style={{outline: "none", border: "none", backgroundColor: "#b4b4b4ff", padding: 5, borderRadius: 5}} placeholder='Search user' />
       
       {/* Buttons for each page */}
-      {/* Pages: 0 - users, 1 - support tickets, 2 - dev, 3 barcode things */}
+      {/* Pages: 0 - users, 1 - support tickets, 2 - barcodes, 3 dev */}
       <div style={{display: "flex", gap: 10, width: "100%"}}>
         {Array(4).fill(null).map((_, i) => {
           const allUsersName = "All Users: " + users.length;
@@ -337,8 +346,9 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
                   </div>
                  
                   <p style={{fontSize: 12, fontWeight: "300",}}>{new Date(data.dateAdded).toLocaleDateString()}</p>
-                  
-                  {/* <button onClick={() => {removeBarcode(data._id)}} style={{width: 100}}>{data. ? "Recover" : "Remove"}</button> */}
+
+                  <button onClick={() => {removeBarcode(data._id)}} style={{width: 100}}>{"Remove"}</button>
+                
                 </div>
                 <div style={{padding: 20, borderRadius: 10, display: "flex", flexDirection: "column", flex: 1, gap: 5, backgroundColor}}>
                   <p style={{fontSize: 12, fontWeight: "300",}}>Cal: {food.quantity*parseInt(food.nutrition.calories*100)/100}</p>
@@ -442,6 +452,7 @@ const Admin = () => {
     supportTickets={supportTickets}
     setSupportTickets={setSupportTickets}
     barcodeFoods={barcodeFoods}
+    setBarcodeFoods={setBarcodeFoods}
     
     />
   ) : (
