@@ -119,6 +119,7 @@ const UserSchema = new mongoose.Schema({
 
                 // Sharing
                 workouts: true,
+                askWorkouts: false,
                 achievements: true,
 
                 // Notifications
