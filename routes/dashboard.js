@@ -192,15 +192,18 @@ router.post('/requestactivity', authToken, async (req, res) => {
                 console.log("setting to null");
                 activityData.details.workout = null;
             }
-
-            if (user.streak.achievementAmount < activityData.details.totalWorkouts) {
+            // grab the server total workouts
+            //if (user.streak.achievementAmount < activityData.details.totalWorkouts) {
+            if (user.streak.achievementAmount < user.pastWorkouts.length) {
                 console.log("Setting streak amount");
-                user.streak.achievementAmount = activityData.details.totalWorkouts
+                //user.streak.achievementAmount = activityData.details.totalWorkouts
+                user.streak.achievementAmount = user.pastWorkouts.length
                 await user.save();
             }
 
             const allActivityByUser = await Activity.find({userId: req.userId, type: "complete_workout_achievement"});
-            if (allActivityByUser.map(a => a.details.totalWorkouts).includes(activityData.details.totalWorkouts)) {
+            //if (allActivityByUser.map(a => a.details.totalWorkouts).includes(activityData.details.totalWorkouts)) {
+            if (allActivityByUser.map(a => a.details.totalWorkouts).includes(user.pastWorkouts.length)) {
                 showAchievement = false;
                 activityData.type = "complete_workout";
             }
