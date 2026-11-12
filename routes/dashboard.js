@@ -853,8 +853,17 @@ router.post('/logconsumption', authToken, async (req, res) => {
     try {
         const user = await User.findById(req.userId);
         if (!user) return res.json({status: "error", message: "User not found"});
-        const {meal} = req.body;
-        const dateKey = getDateKey(meal.date);
+        const {meal, dateKey: requestedDateKey} = req.body;
+        const dateKey = requestedDateKey ?? getDateKey(meal.date);
+        const dateKeyMatch = typeof dateKey === "string"
+            ? /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(\d{4})$/.exec(dateKey)
+            : null;
+        if (!dateKeyMatch) return res.json({status: "error", message: "Invalid consumption date"});
+        const [, month, day, year] = dateKeyMatch;
+        const parsedDate = new Date(Number(year), Number(month) - 1, Number(day));
+        if (parsedDate.getFullYear() !== Number(year) || parsedDate.getMonth() !== Number(month) - 1 || parsedDate.getDate() !== Number(day)) {
+            return res.json({status: "error", message: "Invalid consumption date"});
+        }
         const consumedMeals = user.consumedMeals;
         const todaysMeals = consumedMeals[dateKey] ?? [];
         const newMeals = [meal, ...todaysMeals];
