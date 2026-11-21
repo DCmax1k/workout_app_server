@@ -783,7 +783,7 @@ router.post('/savemeal', authToken, async (req, res) => {
         const {meal} = req.body;
 
         const savedMeals = user.savedMeals;
-        const idx = savedMeals.findIndex(m => m._id === meal._id);
+        const idx = savedMeals.findIndex(m => m.id === meal.id);
         if (idx >= 0) {
             // Update existing
             savedMeals[idx] = meal;
