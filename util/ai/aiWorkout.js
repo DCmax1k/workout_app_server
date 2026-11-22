@@ -1,8 +1,8 @@
 const { GoogleGenAI } = require("@google/genai");
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_KEY });
-const PRIMARY_MODEL = "gemini-2.5-flash-lite";
-const FALLBACK_MODEL = "gemini-3.1-flash-lite";
+const PRIMARY_MODEL = "gemini-3.5-flash-lite";
+const FALLBACK_MODEL = "gemini-3.5-flash";
 
 const intentSchema = {
   type: "object",
@@ -173,6 +173,28 @@ const getExplicitRepEdit = (prompt) => {
   return null;
 };
 
+const sanitizeSetForTracks = (incomingSet, tracks) => {
+  const set = {};
+  (Array.isArray(tracks) ? tracks : []).forEach(track => {
+    const value = incomingSet?.[track];
+    if (value === undefined || value === null || value === "" || value === false || value === "false") return;
+    if ((track === "weight" || track === "weightPlus" || track === "reps") && String(value).trim() === "0") return;
+    set[track] = String(value);
+  });
+  return set;
+};
+
+const mergeSetArrays = (tracks, ...arrays) => {
+  const setArrays = arrays.filter(Array.isArray);
+  const setCount = setArrays.reduce((max, setArray) => Math.max(max, setArray.length), 0);
+  return Array.from({ length: setCount }, (_, index) => (
+    setArrays.reduce((merged, setArray) => ({
+      ...merged,
+      ...sanitizeSetForTracks(setArray[index], tracks),
+    }), {})
+  ));
+};
+
 const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
   const exercises = Array.isArray(activeExercises) ? activeExercises : [];
   const repEdit = getExplicitRepEdit(prompt);
@@ -188,17 +210,32 @@ const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
     );
     if (!target?.uniqueId) return;
 
+    const preliminaryTracks = Array.isArray(target.tracks) && target.tracks.length
+      ? target.tracks
+      : Array.isArray(rawItem.changes?.tracks)
+        ? rawItem.changes.tracks
+        : Array.isArray(rawItem.exercise?.tracks)
+          ? rawItem.exercise.tracks
+          : ["reps"];
     const existing = deduplicated.get(target.uniqueId);
     const merged = existing ? {
       ...existing,
       ...rawItem,
       exercise: rawItem.exercise && typeof rawItem.exercise === "object"
-        ? { ...existing.exercise, ...rawItem.exercise }
+        ? {
+            ...existing.exercise,
+            ...rawItem.exercise,
+            sets: mergeSetArrays(preliminaryTracks, existing.exercise?.sets, rawItem.exercise?.sets),
+          }
         : existing.exercise,
       changes: rawItem.changes && typeof rawItem.changes === "object"
-        ? { ...existing.changes, ...rawItem.changes }
+        ? {
+            ...existing.changes,
+            ...rawItem.changes,
+            sets: mergeSetArrays(preliminaryTracks, existing.changes?.sets, rawItem.changes?.sets),
+          }
         : existing.changes,
-      sets: Array.isArray(rawItem.sets) && rawItem.sets.length ? rawItem.sets : existing.sets,
+      sets: mergeSetArrays(preliminaryTracks, existing.sets, rawItem.sets),
     } : { ...rawItem };
 
     const tracks = Array.isArray(target.tracks) && target.tracks.length
@@ -208,18 +245,24 @@ const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
         : Array.isArray(merged.exercise?.tracks)
           ? merged.exercise.tracks
           : ["reps"];
-    const incomingSets = Array.isArray(merged.changes?.sets)
-      ? merged.changes.sets
-      : Array.isArray(merged.exercise?.sets)
-        ? merged.exercise.sets
-        : Array.isArray(merged.sets)
-          ? merged.sets
-          : [];
+    const incomingSets = mergeSetArrays(
+      tracks,
+      merged.sets,
+      merged.changes?.sets,
+      merged.exercise?.sets,
+    );
+    const requestedSetCountMatch = String(prompt).match(/(?:^|\s)(\d+)\s*(?:sets?|rounds?)\b/i);
+    const requestedSetCount = requestedSetCountMatch
+      ? Math.max(1, parseInt(requestedSetCountMatch[1], 10))
+      : 0;
     const setCount = Math.max(
       target.sets?.length ?? 0,
       incomingSets.length,
+      requestedSetCount,
       0
     );
+    const weightProgression = parseProgression(prompt, "weight", setCount);
+    const repProgression = parseProgression(prompt, "reps", setCount);
     const normalizedSets = Array.from({ length: setCount }, (_, index) => {
       const incomingSet = incomingSets[index] || {};
       const targetSet = target.sets?.[index] || {};
@@ -230,6 +273,8 @@ const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
         if (value === undefined || value === null || value === "" || value === false || value === "false") {
           value = targetSet[track];
         }
+        if (track === "weight" && weightProgression) value = weightProgression[index];
+        if (track === "reps" && repProgression) value = repProgression[index];
         set[track] = value === undefined || value === null ? "" : String(value);
       });
 
@@ -264,8 +309,15 @@ const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
 const normalizeName = (name = "") => String(name).toLowerCase().replace(/[^a-z0-9]/g, "");
 
 const getRequestedSetCount = (prompt) => {
-  const match = String(prompt).match(/(?:^|\s)(\d+)\s*(?:sets?|rounds?)\b/i);
-  return match ? Math.max(1, parseInt(match[1], 10)) : 3;
+  const text = String(prompt).toLowerCase();
+  const numericMatch = text.match(/(?:^|\s)(\d+)\s*(?:sets?|rounds?)\b/i);
+  if (numericMatch) return Math.max(1, parseInt(numericMatch[1], 10));
+  const wordCounts = {
+    one: 1, two: 2, three: 3, four: 4, five: 5,
+    six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  };
+  const wordMatch = text.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:sets?|rounds?)\b/i);
+  return wordMatch ? wordCounts[wordMatch[1].toLowerCase()] : 3;
 };
 
 const getFirstNumber = (prompt, pattern) => {
@@ -273,46 +325,195 @@ const getFirstNumber = (prompt, pattern) => {
   return match ? match[1] : null;
 };
 
-const normalizeAddedWorkoutItems = (prompt, items) => {
-  return (Array.isArray(items) ? items : []).map(rawItem => {
-    if (!rawItem || typeof rawItem !== "object") return rawItem;
+const parseProgression = (prompt, track, setCount) => {
+  const text = String(prompt);
+  if (track === "weight") {
+    const rangeMatch = text.match(/(?:from\s*)?(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?\s*(?:to|through|until)\s*(?:the\s+fifth\s+set\s+(?:being|at)\s*)?(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?/i)
+      || text.match(/(?:weight|weighing).{0,40}?(?:from\s*)?(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?.{0,50}?(?:to|through|until)\s*(?:the\s+(?:\w+)\s+set\s+(?:being|at)\s*)?(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?/i);
+    if (!rangeMatch) {
+      const startMatch = text.match(/(?:weight|weighing).{0,30}?(?:from\s*|at\s*|of\s*)(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?/i);
+      if (!startMatch) return null;
+      const start = Number(startMatch[1]);
+      const fixedMatch = text.match(/(?:fifth|5th|last)\s+set\s+(?:being\s+|at\s*)?(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?/i);
+      if (!fixedMatch) return null;
+      const end = Number(fixedMatch[1]);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || setCount < 1) return null;
+      return Array.from({ length: setCount }, (_, index) => {
+        const value = start + ((end - start) * index / Math.max(1, setCount - 1));
+        return String(Math.round(value * 10) / 10);
+      });
+    }
+    const start = Number(rangeMatch[1]);
+    const end = Number(rangeMatch[2]);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || setCount < 1) return null;
+    return Array.from({ length: setCount }, (_, index) => {
+      const value = start + ((end - start) * index / Math.max(1, setCount - 1));
+      return String(Math.round(value * 10) / 10);
+    });
+  }
 
+  if (track === "reps") {
+    const startMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:reps?|repetitions?)\s*(?:to\s*start|at\s*the\s*start)/i)
+      || text.match(/reps?.{0,30}?(?:go(?:es)?\s*)?(?:from\s*|start(?:s|ing)?\s*(?:at\s*|with\s*)?|at\s*|of\s*)(\d+(?:\.\d+)?)\s*(?:reps?|repetitions?)?/i);
+    const endMatch = text.match(/(?:ending|finish(?:es|ing)?|down)\s*(?:with|at|to)?\s*(?:like\s*)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:reps?|repetitions?)?/i)
+      || text.match(/(?:to|down\s*to|until)\s*(?:like\s*)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:reps?|repetitions?)?/i);
+    if (startMatch && endMatch) {
+      const wordNumbers = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+      const start = Number(startMatch[1]);
+      const end = /^\d/.test(endMatch[1]) ? Number(endMatch[1]) : wordNumbers[endMatch[1].toLowerCase()];
+      if (Number.isFinite(start) && Number.isFinite(end) && setCount > 0) {
+        return Array.from({ length: setCount }, (_, index) => {
+          const value = start + ((end - start) * index / Math.max(1, setCount - 1));
+          return String(Math.max(1, Math.round(value)));
+        });
+      }
+    }
+
+    const rangeMatch = text.match(/(?:reps?|repetitions?).{0,30}?(?:from\s*|start(?:s|ing)?\s*(?:at\s*|with\s*)?|at\s*|of\s*)?(\d+(?:\.\d+)?)\s*(?:reps?|repetitions?)?.{0,60}?(?:to|through|until|ending\s+(?:at|with)).{0,20}?(\d+(?:\.\d+)?)\s*(?:reps?|repetitions?)?/i)
+      || text.match(/(\d+(?:\.\d+)?)\s*(?:reps?|repetitions?)\s*(?:to|->)\s*(\d+(?:\.\d+)?)\s*(?:reps?|repetitions?)?/i);
+    if (rangeMatch) {
+      const start = Number(rangeMatch[1]);
+      const end = Number(rangeMatch[2]);
+      if (Number.isFinite(start) && Number.isFinite(end) && setCount > 0) {
+        return Array.from({ length: setCount }, (_, index) => {
+          const value = start + ((end - start) * index / Math.max(1, setCount - 1));
+          return String(Math.max(1, Math.round(value)));
+        });
+      }
+    }
+
+    const fallbackStartMatch = text.match(/reps?.{0,30}?(?:start(?:s|ing)?\s*(?:at|from)\s*)(\d+(?:\.\d+)?)/i);
+    if (fallbackStartMatch && /(?:go(?:es)?|drop(?:s)?|decreas(?:e|es|ing)|down|descending)/i.test(text)) {
+      const start = Number(fallbackStartMatch[1]);
+      if (Number.isFinite(start)) {
+        return Array.from({ length: setCount }, (_, index) =>
+          String(Math.max(1, Math.round(start - (index * 2))))
+        );
+      }
+    }
+  }
+
+  return null;
+};
+
+const normalizeAddedWorkoutItems = (prompt, items, existingExerciseNames = []) => {
+  const deduplicated = new Map();
+  const findKnownExercise = (name) => {
+    const candidates = Array.isArray(existingExerciseNames) ? existingExerciseNames : [];
+    const normalizedName = normalizeName(name);
+    if (!normalizedName) return null;
+    return candidates.find(exercise =>
+      exercise && typeof exercise === "object"
+      && normalizeName(exercise.name) === normalizedName
+    ) || candidates.find(exercise =>
+      exercise && typeof exercise === "object"
+      && (normalizeName(exercise.name).includes(normalizedName)
+        || normalizedName.includes(normalizeName(exercise.name)))
+    ) || null;
+  };
+
+  const inferKnownExerciseFromPrompt = () => {
+    const candidates = Array.isArray(existingExerciseNames) ? existingExerciseNames : [];
+    const text = String(prompt).toLowerCase();
+    if (!text) return null;
+
+    const promptMatches = candidates.filter(exercise =>
+      exercise && typeof exercise === "object"
+      && text.includes(exercise.name.toLowerCase())
+    );
+    if (promptMatches.length) return promptMatches[0];
+
+    if (/\bbarbell\b/.test(text) && /bench/.test(text)) {
+      return candidates.find(exercise => normalizeName(exercise.name) === "barbellbenchpress") || null;
+    }
+    if (/\bbench(?:press|ing)?\b/.test(text) || /bench/.test(text)) {
+      return candidates.find(exercise => normalizeName(exercise.name) === "barbellbenchpress")
+        || candidates.find(exercise => /bench/.test(normalizeName(exercise.name)))
+        || null;
+    }
+    return null;
+  };
+
+  (Array.isArray(items) ? items : []).forEach(rawItem => {
+    if (!rawItem || typeof rawItem !== "object") return;
+    const key = normalizeName(rawItem.matchedName || rawItem.name);
+    if (!key) return;
+
+    const knownExercise = findKnownExercise(rawItem.matchedName || rawItem.name);
+    const canonicalTracks = knownExercise && Array.isArray(knownExercise.tracks)
+      ? knownExercise.tracks
+      : null;
+
+    const existing = deduplicated.get(key);
+    const mergedTracks = canonicalTracks || (
+      Array.isArray(rawItem.tracks) && rawItem.tracks.length
+        ? rawItem.tracks
+        : existing?.tracks
+    );
+    const merged = existing ? {
+      ...existing,
+      ...rawItem,
+      tracks: mergedTracks,
+      sets: mergeSetArrays(mergedTracks, existing.sets, rawItem.sets),
+    } : {
+      ...rawItem,
+      tracks: canonicalTracks || rawItem.tracks,
+    };
+    deduplicated.set(key, merged);
+  });
+
+  if (deduplicated.size === 0) {
+    const inferredExercise = inferKnownExerciseFromPrompt();
+    if (inferredExercise) {
+      deduplicated.set(normalizeName(inferredExercise.name), {
+        name: inferredExercise.name,
+        matchedName: inferredExercise.name,
+        tracks: inferredExercise.tracks,
+      });
+    }
+  }
+
+  return [...deduplicated.values()].map(rawItem => {
     const tracks = Array.isArray(rawItem.tracks) ? rawItem.tracks : [];
     const setCount = getRequestedSetCount(prompt);
-    const sets = Array.from({ length: setCount }, () => {
+    const incomingSets = Array.isArray(rawItem.sets) ? rawItem.sets : [];
+    const weightProgression = parseProgression(prompt, "weight", setCount);
+    const repProgression = parseProgression(prompt, "reps", setCount);
+    const sets = Array.from({ length: setCount }, (_, index) => {
       const set = {};
-
       tracks.forEach(track => {
-        let value = "0";
-        if (track === "weight") {
-          value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)\b/i);
+        let value = incomingSets[index]?.[track];
+        if (track === "weight" && weightProgression) value = weightProgression[index];
+        if (track === "reps" && repProgression) value = repProgression[index];
+
+        if (track === "weight" && (value === undefined || value === null || value === "")) {
+          value = incomingSets[index]?.weightPlus
+            || getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)\b/i);
           if (!value && !/reps?|repetitions?/i.test(prompt)) value = "100";
           if (!value) value = "0";
-        } else if (track === "weightPlus") {
-          value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)\b/i) || "0";
-        } else if (track === "reps") {
+        } else if (track === "weightPlus" && (value === undefined || value === null || value === "")) {
+          value = incomingSets[index]?.weight
+            || getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)\b/i)
+            || "0";
+        } else if (track === "reps" && (value === undefined || value === null || value === "")) {
           value = getFirstNumber(prompt, /(?:of\s*)?(\d+)\s*(?:reps?|repetitions?)\b/i)
             || getFirstNumber(prompt, /\b(\d+)\s*x\s*\d+\b/i);
           if (!value && !/weight|lbs?|pounds?|kg|kilograms?/i.test(prompt)) value = "10";
           if (!value) value = "0";
-        } else if (track === "mile") {
+        } else if (track === "mile" && (value === undefined || value === null || value === "")) {
           value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:miles?|mi)\b/i) || "0";
-        } else if (track === "time") {
+        } else if (track === "time" && (value === undefined || value === null || value === "")) {
           value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|min|seconds?|secs?|sec)\b/i) || "0";
-        } else if (track === "incline") {
+        } else if (track === "incline" && (value === undefined || value === null || value === "")) {
           value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:%\s*)?(?:incline|grade)\b/i) || "0";
         }
-        set[track] = value;
-      });
 
+        set[track] = value === undefined || value === null ? "0" : String(value);
+      });
       return set;
     });
 
-    return {
-      ...rawItem,
-      tracks,
-      sets,
-    };
+    return { ...rawItem, tracks, sets };
   });
 };
 
@@ -375,6 +576,9 @@ const executeWorkoutIntent = async ({ prompt, intent, activeWorkout, activeExerc
 For every affected exercise return one item with exerciseUniqueId copied exactly from CURRENT EXERCISES and changes containing only fields that must change.
 For every affected exercise also return exercise: {name, description, tracks, muscleGroups, met} with the complete proposed exercise metadata.
     Keep tracks exactly as the CURRENT EXERCISES target. Never change tracks unless the user explicitly asks to change the exercise type.
+    The sets array is ordered: index 0 is set 1, index 1 is set 2, and so on. Put the weight and reps values for set 1 together in the same set object, set 2 in the next object, and continue through set N.
+    Return one item per affected exercise, never one item per track or set. If weight and reps are both updated, one item must contain both tracks and every set object must contain both track values.
+    For progression requests, calculate each set by index. For example, 5 sets with weight 100 to 150 and reps 10 down to 3 should return weight/reps pairs in set order, not separate exercise items.
     Do not use or return weightPlus for normal strength exercises.
     Use ["weight","reps"] for normal barbell, dumbbell, cable, and machine exercises.
     Use ["weightPlus","reps"] only when the target exercise already uses ["weightPlus","reps"].
@@ -391,10 +595,13 @@ For an exercise with no sets or empty set values, generate beginner-level sets. 
 Every weight/reps value must be a string. Never set a complete property.
 One item per affected exercise. Return no direct mutations.`;
   } else {
-    context = `EXISTING EXERCISE NAMES ONLY:\n${JSON.stringify(existingExerciseNames ?? [])}`;
-    instruction = `Add one or more exercises. Match an existing name when close; set matchedName to that exact existing name. Otherwise generate a complete new exercise using this exact structure:
+    context = `AVAILABLE EXERCISES WITH EXACT TRACKS:\n${JSON.stringify(existingExerciseNames ?? [])}`;
+    instruction = `Add distinct exercises only. For every distinct exercise, return exactly one items entry.
+Match an available exercise exactly or by close name and set matchedName to the exact available name.
+Copy the exact tracks array from AVAILABLE EXERCISES WITH EXACT TRACKS. This is mandatory. A strength exercise is ["weight","reps"], never ["weight","weightPlus","reps"] and never ["weightPlus","reps"] unless that exact available exercise uses strengthPlus.
+If no available exercise matches, generate exactly this structure:
 {name:string, group:"created", tracks:string[], description:string, muscleGroups:string[], id:string, met:number, sets:set[]}
-The tracks array is required and MUST use exactly one of these combinations:
+New exercise tracks must use exactly one of these combinations:
 - strength: ["weight","reps"]
 - strengthPlus: ["weightPlus","reps"]
 - cardio: ["mile","time"]
@@ -402,19 +609,17 @@ The tracks array is required and MUST use exactly one of these combinations:
 - repsOnly: ["reps"]
 - timeOnly: ["time"]
 - treadmill: ["mile","incline","time"]
-Choose repsOnly ["reps"] for jumping jacks and other rep-based bodyweight exercises.
-Set count and values follow the request:
-- If the user asks for a complete workout or simply adds exercises without specifying set count or strength values, use exactly 3 sets for strength exercises and normal beginner values of "100" weight and "10" reps.
-- If the user specifies one track only, set that track to the requested value and set every unspecified strength track to "0".
-- If the user specifies a set count, reps, weight, distance, time, or incline, use those values for every set unless they explicitly vary sets.
-- Never leave strength track values empty or use "false". Use "0" when not specified and when only another strength track was requested.
-Each set must be an object keyed by each track, with string values. Example: tracks ["weight","reps"], sets [{"weight":"100","reps":"3"},{"weight":"100","reps":"3"},{"weight":"100","reps":"3"}].
-For jumping jacks with "3 sets of 10", use tracks ["reps"], sets [{"reps":"10"},{"reps":"10"},{"reps":"10"}].
-Set group to "created". Set muscleGroups to an array of specific lowercase muscles from Exercises.js, not categories like chest/leg? Existing values include chest, abs, back, biceps, triceps, forearms, shoulders, legs, calves, glutes, hamstrings, quadriceps, core, obliques, etc. Use no invented spelling.
-Set a realistic met between 2 and 12. Set description to a concise useful description. id is informational and will be replaced by the client.
-MET is required for every distinct exercise. Estimate it from the exercise's actual intensity and type (for example walking 3.5, jumping jacks 8, vigorous running 9.8, strength work 5-6). Never use 6 as a generic placeholder.
-Return exactly one items entry for each distinct exercise. Never return the same exercise multiple times, and never make one item per set.
-Do not include an image. Use the user's requested set count and values. Existing matches may include matchedName plus tracks and sets.`;
+Use ["reps"] for jumping jacks and rep-only bodyweight exercises.
+Set array rule: sets index 0 is set 1, index 1 is set 2, and continuing to set N.
+Every set object may contain only the keys in that exercise's tracks array. Never invent keys, especially never add weightPlus to ["weight","reps"].
+For strength exercises, put weight and reps in the same set object:
+[{\"weight\":\"100\",\"reps\":\"10\"},{\"weight\":\"112.5\",\"reps\":\"8\"},{\"weight\":\"125\",\"reps\":\"6\"},{\"weight\":\"137.5\",\"reps\":\"4\"},{\"weight\":\"150\",\"reps\":\"3\"}]
+For one requested progression, calculate every set index. 5 sets from 100 to 150 pounds and 10 to 3 reps is five set objects, not five exercise entries and not separate weight/reps entries.
+Return no set with only weight and no reps when reps were requested, and no set with only reps and no weight when weight was requested.
+If a track was not requested, use "0" for that strength track. Never use empty values or false. Every value is a string.
+When no set count or values are requested, use 3 strength sets with weight "100" and reps "10".
+Set group "created", met, muscleGroups, and a concise description for a new exercise.
+Return one item for one distinct exercise. Never repeat the same exercise, never return one item per set, and never split weight and reps across items.`;
   }
 
   const response = await generateWithFallback({
@@ -435,7 +640,7 @@ Do not include an image. Use the user's requested set count and values. Existing
     return {
       intent,
       message: typeof response.message === "string" ? response.message : "",
-      items: normalizeAddedWorkoutItems(prompt, response.items),
+      items: normalizeAddedWorkoutItems(prompt, response.items, existingExerciseNames),
     };
   }
   return {
