@@ -222,7 +222,7 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
           <h4>{editPerson.pastWorkoutsLength} completed workout{editPerson.pastWorkoutsLength===1 ? "":"s"}</h4>
           <h4>{editPerson.extraDetails.ai?.image?.used ?? 0} AI images used</h4>
           <h4>{editPerson.extraDetails.ai?.foodText?.used ?? 0} AI food text used</h4>
-          <h4>{editPerson.extraDetails.ai?.workoutHelper?.used ?? 0} AI Workout Helper used</h4>
+          <h4>{editPerson.extraDetails.ai?.aiWorkoutHelper?.used ?? 0} AI Workout Helper used</h4>
           <div style={{marginTop: '1vh'}}></div>
           <button onClick={addCredit}>Add 1 image Credit</button>
           <div style={{marginTop: '1vh'}}></div>
