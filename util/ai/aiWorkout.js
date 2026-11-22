@@ -29,41 +29,12 @@ const executionSchema = {
         type: "object",
         properties: {
           name: { type: "string" },
-          description: { type: "string" },
-          group: { type: "string" },
+          exerciseUniqueId: { type: "string" },
           tracks: {
             type: "array",
             items: {
               type: "string",
               enum: ["weight", "weightPlus", "reps", "mile", "time", "incline"],
-            },
-          },
-          exerciseUniqueId: { type: "string" },
-          muscleGroups: { type: "array", items: { type: "string" } },
-          met: { type: "number" },
-          exercise: {
-            type: "object",
-            description: "Complete proposed exercise object for EDIT_WORKOUT.",
-            properties: {
-              name: { type: "string" },
-              description: { type: "string" },
-              tracks: { type: "array", items: { type: "string" } },
-              muscleGroups: { type: "array", items: { type: "string" } },
-              met: { type: "number" },
-              sets: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    weight: { type: "string" },
-                    weightPlus: { type: "string" },
-                    reps: { type: "string" },
-                    mile: { type: "string" },
-                    time: { type: "string" },
-                    incline: { type: "string" },
-                  },
-                },
-              },
             },
           },
           sets: {
@@ -80,33 +51,11 @@ const executionSchema = {
               },
             },
           },
+          description: { type: "string" },
+          group: { type: "string" },
+          muscleGroups: { type: "array", items: { type: "string" } },
+          met: { type: "number" },
           matchedName: { type: "string" },
-          exerciseUniqueId: { type: "string" },
-          changes: {
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              description: { type: "string" },
-              tracks: { type: "array", items: { type: "string" } },
-              muscleGroups: { type: "array", items: { type: "string" } },
-              met: { type: "number" },
-              sets: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    weight: { type: "string" },
-                    weightPlus: { type: "string" },
-                    reps: { type: "string" },
-                    mile: { type: "string" },
-                    time: { type: "string" },
-                    incline: { type: "string" },
-                  },
-                },
-              },
-            },
-          },
-          actionLabel: { type: "string" },
         },
       },
     },
@@ -173,6 +122,20 @@ const getExplicitRepEdit = (prompt) => {
   return null;
 };
 
+const getExplicitWeightEdit = (prompt) => {
+  const text = String(prompt);
+  if (/(?:weight|pounds?|lbs?|kg|kilograms?).{0,40}(?:\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?\s*(?:to|through|until)\s*(?:the\s+(?:\w+\s+)?set\s+(?:being\s+|at\s*)?)?\d+(?:\.\d+)?/i.test(text)) return null;
+  if (/(?:from\s*)?\d+(?:\.\d+)?\s*(?:lbs?|pounds?|kg|kilograms?)?\s*(?:to|through|until)\s*(?:the\s+(?:\w+\s+)?set\s+(?:being\s+|at\s*)?)?\d+(?:\.\d+)?\s*(?:lbs?|pounds?|kg|kilograms?)?/i.test(text)
+    && /\b(?:weight|pounds?|lbs?|kg|kilograms?)\b/i.test(text)) return null;
+
+  const updateMatch = text.match(/(?:weight|weigh(?:ing|t))\s*(?:to|at|of|as|=)\s*(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?/i)
+    || text.match(/(?:set|make|change|update)\s+(?:the\s+)?(?:weight|weighing)\s*(?:to|at|as|=)?\s*(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?/i)
+    || text.match(/(?:make|set|change|update)\s+(?:everything\s+|all\s+(?:of\s+)?(?:the\s+)?)?(?:at\s+|to\s+)?(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?)/i)
+    || text.match(/(?:^|\b)(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)\b/i);
+
+  return updateMatch ? updateMatch[1] : null;
+};
+
 const sanitizeSetForTracks = (incomingSet, tracks) => {
   const set = {};
   (Array.isArray(tracks) ? tracks : []).forEach(track => {
@@ -198,59 +161,29 @@ const mergeSetArrays = (tracks, ...arrays) => {
 const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
   const exercises = Array.isArray(activeExercises) ? activeExercises : [];
   const repEdit = getExplicitRepEdit(prompt);
+  const weightEdit = getExplicitWeightEdit(prompt);
   const deduplicated = new Map();
 
   (Array.isArray(items) ? items : []).forEach(rawItem => {
     if (!rawItem || typeof rawItem !== "object") return;
-    const target = exercises.find(exercise =>
-      exercise.uniqueId === rawItem.exerciseUniqueId
-    ) || exercises.find(exercise =>
-      typeof rawItem.name === "string"
-      && normalizeName(exercise.name) === normalizeName(rawItem.name)
-    );
+    const target = exercises.find(exercise => exercise.uniqueId === rawItem.exerciseUniqueId)
+      || exercises.find(exercise =>
+        typeof rawItem.name === "string"
+        && normalizeName(exercise.name) === normalizeName(rawItem.name)
+      );
     if (!target?.uniqueId) return;
 
-    const preliminaryTracks = Array.isArray(target.tracks) && target.tracks.length
+    const tracks = Array.isArray(target.tracks) && target.tracks.length
       ? target.tracks
-      : Array.isArray(rawItem.changes?.tracks)
-        ? rawItem.changes.tracks
-        : Array.isArray(rawItem.exercise?.tracks)
-          ? rawItem.exercise.tracks
-          : ["reps"];
+      : ["reps"];
     const existing = deduplicated.get(target.uniqueId);
     const merged = existing ? {
       ...existing,
       ...rawItem,
-      exercise: rawItem.exercise && typeof rawItem.exercise === "object"
-        ? {
-            ...existing.exercise,
-            ...rawItem.exercise,
-            sets: mergeSetArrays(preliminaryTracks, existing.exercise?.sets, rawItem.exercise?.sets),
-          }
-        : existing.exercise,
-      changes: rawItem.changes && typeof rawItem.changes === "object"
-        ? {
-            ...existing.changes,
-            ...rawItem.changes,
-            sets: mergeSetArrays(preliminaryTracks, existing.changes?.sets, rawItem.changes?.sets),
-          }
-        : existing.changes,
-      sets: mergeSetArrays(preliminaryTracks, existing.sets, rawItem.sets),
+      sets: mergeSetArrays(tracks, existing.sets, rawItem.sets),
     } : { ...rawItem };
 
-    const tracks = Array.isArray(target.tracks) && target.tracks.length
-      ? target.tracks
-      : Array.isArray(merged.changes?.tracks)
-        ? merged.changes.tracks
-        : Array.isArray(merged.exercise?.tracks)
-          ? merged.exercise.tracks
-          : ["reps"];
-    const incomingSets = mergeSetArrays(
-      tracks,
-      merged.sets,
-      merged.changes?.sets,
-      merged.exercise?.sets,
-    );
+    const incomingSets = mergeSetArrays(tracks, merged.sets);
     const requestedSetCountMatch = String(prompt).match(/(?:^|\s)(\d+)\s*(?:sets?|rounds?)\b/i);
     const requestedSetCount = requestedSetCountMatch
       ? Math.max(1, parseInt(requestedSetCountMatch[1], 10))
@@ -273,6 +206,8 @@ const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
         if (value === undefined || value === null || value === "" || value === false || value === "false") {
           value = targetSet[track];
         }
+        if (track === "weight" && weightEdit) value = weightEdit;
+        if (track === "weightPlus" && weightEdit) value = weightEdit;
         if (track === "weight" && weightProgression) value = weightProgression[index];
         if (track === "reps" && repProgression) value = repProgression[index];
         set[track] = value === undefined || value === null ? "" : String(value);
@@ -287,19 +222,12 @@ const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
     });
 
     deduplicated.set(target.uniqueId, {
-      ...merged,
       exerciseUniqueId: target.uniqueId,
-      changes: {
-        ...(merged.changes && typeof merged.changes === "object" ? merged.changes : {}),
-        tracks,
-        sets: normalizedSets,
-      },
-      exercise: {
-        ...(merged.exercise && typeof merged.exercise === "object" ? merged.exercise : {}),
-        name: target.name,
-        tracks,
-        sets: normalizedSets,
-      },
+      name: typeof merged.name === "string" && merged.name.trim()
+        ? merged.name
+        : target.name,
+      tracks,
+      sets: normalizedSets,
     });
   });
 
@@ -612,29 +540,14 @@ const executeWorkoutIntent = async ({ prompt, intent, activeWorkout, activeExerc
         return values;
       }),
     }));
-    context = `CURRENT EXERCISES (only exercise IDs, names, tracks, and set values):\n${JSON.stringify(conciseExercises)}`;
+    context = `CURRENT EXERCISES (exercise name, tracks, and sets only):\n${JSON.stringify(conciseExercises)}`;
     instruction = `Propose workout edits only.
-For every affected exercise return one item with exerciseUniqueId copied exactly from CURRENT EXERCISES and changes containing only fields that must change.
-For every affected exercise also return exercise: {name, description, tracks, muscleGroups, met} with the complete proposed exercise metadata.
-    Keep tracks exactly as the CURRENT EXERCISES target. Never change tracks unless the user explicitly asks to change the exercise type.
-    The sets array is ordered: index 0 is set 1, index 1 is set 2, and so on. Put the weight and reps values for set 1 together in the same set object, set 2 in the next object, and continue through set N.
-    Return one item per affected exercise, never one item per track or set. If weight and reps are both updated, one item must contain both tracks and every set object must contain both track values.
-    For progression requests, calculate each set by index. For example, 5 sets with weight 100 to 150 and reps 10 down to 3 should return weight/reps pairs in set order, not separate exercise items.
-    Do not use or return weightPlus for normal strength exercises.
-    Use ["weight","reps"] for normal barbell, dumbbell, cable, and machine exercises.
-    Use ["weightPlus","reps"] only when the target exercise already uses ["weightPlus","reps"].
-    If only weight is being updated, return the exact current tracks and set every weight value while preserving each current reps value.
-    If only reps are being updated, return the exact current tracks and set every reps value while preserving each current weight value.
-    Return sets as an array containing one object per set. Each object must contain only the target exercise's current track keys.
-    Never add extra keys such as weightPlus when the target tracks do not include weightPlus.
-    Never return the string "false" or boolean false as a set value.
-The changes object may contain:
-- "tracks": one of the exact track combinations
-- "sets": an array with one object per set, containing only keys in that exercise's tracks
-- "name" if renamed
-For an exercise with no sets or empty set values, generate beginner-level sets. For strength tracks ["weight","reps"], use conservative weight and reps strings. For jumping jacks or rep-only exercises use reps strings.
-Every weight/reps value must be a string. Never set a complete property.
-One item per affected exercise. Return no direct mutations.`;
+Return exactly one item per affected exercise with these fields:
+{exerciseUniqueId:string, name:string, tracks:string[], sets:set[]}
+Copy exerciseUniqueId, name, and tracks exactly from the target. Copy the full set array and preserve every existing set value unless the request changes it.
+Set values must be strings. Each set object must contain only the target exercise's track keys.
+Only include affected exercises. Do not include unaffected exercises or return an item for a set or track separately.
+Never change tracks unless the user explicitly requests it.`;
   } else {
     context = `AVAILABLE EXERCISES WITH EXACT TRACKS:\n${JSON.stringify(existingExerciseNames ?? [])}`;
     instruction = `Add distinct exercises only. For every distinct exercise, return exactly one items entry.
