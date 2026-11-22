@@ -18,7 +18,7 @@ const aiWorkout = require('../util/ai/aiWorkout');
 router.post("/aiworkout/classify", authToken, async (req, res) => {
   const classifyStartedAt = Date.now();
   try {
-    const { prompt } = req.body;
+    const { prompt, activeWorkout } = req.body;
     if (typeof prompt !== "string" || !prompt.trim()) {
       return res.json({ status: "error", message: "Please enter a prompt." });
     }
@@ -26,13 +26,51 @@ router.post("/aiworkout/classify", authToken, async (req, res) => {
     if (!user) return res.json({ status: "error", message: "User not found" });
     if (!user.extraDetails) user.extraDetails = {};
     if (!user.extraDetails.ai) user.extraDetails.ai = {};
-    if (!user.extraDetails.ai.aiWorkoutHelper) user.extraDetails.ai.aiWorkoutHelper = { used: 0 };
-    const used = Number(user.extraDetails.ai.aiWorkoutHelper.used);
-    user.extraDetails.ai.aiWorkoutHelper.used = (Number.isFinite(used) ? used : 0) + 1;
+
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const storedUsage = user.extraDetails.ai.aiWorkoutHelper ?? {};
+    const aiUsage = {
+      credits: Number.isFinite(Number(storedUsage.credits)) ? Number(storedUsage.credits) : 10,
+      lastReset: Number.isFinite(Number(storedUsage.lastReset)) ? Number(storedUsage.lastReset) : now.getTime(),
+      used: Number.isFinite(Number(storedUsage.used)) ? Number(storedUsage.used) : 0,
+    };
+    const lastResetDate = new Date(aiUsage.lastReset).toISOString().split('T')[0];
+
+    if (user.premium) {
+      if (todayStr !== lastResetDate) {
+        aiUsage.credits = 10;
+        aiUsage.lastReset = now.getTime();
+      }
+    } else if (aiUsage.credits <= 0) {
+      return res.json({
+        status: "error",
+        message: "Daily workout prompts are a Premium feature. Upgrade to get 10 prompts every day!",
+        showPremiumButton: true,
+        remaining: aiUsage.credits,
+        used: aiUsage.used,
+        lastReset: aiUsage.lastReset,
+      });
+    }
+
+    if (aiUsage.credits <= 0) {
+      return res.json({
+        status: "error",
+        message: "You've used all your daily workout prompts. Please try again tomorrow!",
+        remaining: aiUsage.credits,
+        used: aiUsage.used,
+        lastReset: aiUsage.lastReset,
+      });
+    }
+
+    aiUsage.credits -= 1;
+    if (isNaN(aiUsage.used)) aiUsage.used = 0;
+    aiUsage.used += 1;
+    user.extraDetails.ai.aiWorkoutHelper = aiUsage;
     user.markModified("extraDetails");
     await user.save();
 
-    const response = await aiWorkout.classifyWorkoutIntent(prompt.trim());
+    const response = await aiWorkout.classifyWorkoutIntent(prompt.trim(), activeWorkout);
     //console.log(`[AI Workout] Classification completed in ${Date.now() - classifyStartedAt}ms: ${response.intent || "error"}`);
     if (response.isOverloaded) {
       return res.json({ status: "error", message: "The AI is busy. Please try again in a moment." });
@@ -47,6 +85,9 @@ router.post("/aiworkout/classify", authToken, async (req, res) => {
       status: "success",
       intent: response.intent,
       directResponse: typeof response.directResponse === "string" ? response.directResponse.trim() : "",
+      remaining: aiUsage.credits,
+      used: aiUsage.used,
+      lastReset: aiUsage.lastReset,
     });
   } catch (error) {
     console.error("AI workout classify error:", error);

@@ -317,24 +317,50 @@ app.post('/auth', authToken, async (req, res) => {
         // Check AI usage and credits
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
-        const aiImageUsage = user.extraDetails.ai.image ?? {credits: 10, lastReset: now.getTime(), used: 0};
+        if (!u.extraDetails) u.extraDetails = {};
+        if (!u.extraDetails.ai) u.extraDetails.ai = {};
+        let aiCreditsChanged = false;
+        const aiImageUsage = u.extraDetails.ai.image ?? {credits: 10, lastReset: now.getTime(), used: 0};
         const lastResetDateImage = new Date(aiImageUsage.lastReset).toISOString().split('T')[0];
         // Reset AI image credits
-        if (user.premium && todayStr !== lastResetDateImage) {
+        if (u.premium && todayStr !== lastResetDateImage) {
             //console.log("Resetting credits");
             aiImageUsage.credits = 10;
             aiImageUsage.lastReset = now.getTime();
-            
-            user.extraDetails.ai.image = aiImageUsage;
+            u.extraDetails.ai.image = aiImageUsage;
+            aiCreditsChanged = true;
         }
         // Reset AI food text credits
-        const aiFoodText = user.extraDetails.ai.foodText ?? {credits: 30, lastReset: now.getTime(), used: 0};
+        const aiFoodText = u.extraDetails.ai.foodText ?? {credits: 30, lastReset: now.getTime(), used: 0};
         const lastResetDateFoodText = new Date(aiFoodText.lastReset).toISOString().split('T')[0];
-        if (user.premium && todayStr !== lastResetDateFoodText) {
+        if (u.premium && todayStr !== lastResetDateFoodText) {
             aiFoodText.credits = 30;
             aiFoodText.lastReset = now.getTime();
-            user.extraDetails.ai.foodText = aiFoodText;
+            u.extraDetails.ai.foodText = aiFoodText;
+            aiCreditsChanged = true;
         }
+        // Reset AI workout helper credits
+        const storedWorkoutUsage = u.extraDetails.ai.aiWorkoutHelper ?? {};
+        const aiWorkoutHelper = {
+            credits: Number.isFinite(Number(storedWorkoutUsage.credits)) ? Number(storedWorkoutUsage.credits) : 10,
+            lastReset: Number.isFinite(Number(storedWorkoutUsage.lastReset)) ? Number(storedWorkoutUsage.lastReset) : now.getTime(),
+            used: Number.isFinite(Number(storedWorkoutUsage.used)) ? Number(storedWorkoutUsage.used) : 0,
+        };
+        const lastResetDateWorkoutHelper = new Date(aiWorkoutHelper.lastReset).toISOString().split('T')[0];
+        if (u.premium && todayStr !== lastResetDateWorkoutHelper) {
+            aiWorkoutHelper.credits = 10;
+            aiWorkoutHelper.lastReset = now.getTime();
+            u.extraDetails.ai.aiWorkoutHelper = aiWorkoutHelper;
+            aiCreditsChanged = true;
+        } else if (!u.extraDetails.ai.aiWorkoutHelper) {
+            u.extraDetails.ai.aiWorkoutHelper = aiWorkoutHelper;
+            aiCreditsChanged = true;
+        }
+        if (aiCreditsChanged) {
+            u.markModified("extraDetails");
+            await u.save();
+        }
+        user.extraDetails = JSON.parse(JSON.stringify(u.extraDetails));
 
         const userInfo = {
             recentActivity,

@@ -517,16 +517,37 @@ const normalizeAddedWorkoutItems = (prompt, items, existingExerciseNames = []) =
   });
 };
 
-const classifyWorkoutIntent = async (prompt) => {
+const classifyWorkoutIntent = async (prompt, activeWorkout) => {
+  const activeExerciseCount = Array.isArray(activeWorkout?.exercises)
+    ? activeWorkout.exercises.length
+    : 0;
+  const activeExerciseNames = Array.isArray(activeWorkout?.exercises)
+    ? activeWorkout.exercises
+        .map(exercise => exercise?.name)
+        .filter(Boolean)
+    : [];
+  const workoutContext = `ACTIVE WORKOUT STATE:
+- exerciseCount: ${activeExerciseCount}
+- exerciseNames: ${JSON.stringify(activeExerciseNames)}
+- isEmpty: ${activeExerciseCount === 0 ? "true" : "false"}`;
+
   const response = await generateWithFallback({
     systemInstruction: `Classify the user's workout request into exactly one operation.
-WORKOUT_QUESTION: asks about or explains the current workout.
-EDIT_WORKOUT: changes or replaces existing exercises, sets, reps, weight, rest, or workout details.
-ADD_EXERCISE: adds one or more exercises to the workout.
+WORKOUT_QUESTION: asks about, explains, or gives advice on the current workout itself.
+EDIT_WORKOUT: modifies existing exercises or existing workout details, such as changing sets, reps, weight, rest, names, tracks, removing exercises, or replacing a specific exercise.
+ADD_EXERCISE: adds exercises to the workout.
+
+Intent priority:
+1. Requests to create, build, compose, suggest, fill, generate, add, or put exercises into a workout must use ADD_EXERCISE. This includes "create a chest workout", "make me a leg day", "add 6 chest exercises", and "give me exercises for push day".
+2. An empty active workout does not mean the request should be EDIT_WORKOUT. If the user asks for a workout or a list of exercises for a day/muscle group, use ADD_EXERCISE. The available exercise library should be used; only create a new exercise entry when no suitable available exercise exists.
+3. If the workout is not empty and the user asks to add, build, or create additional exercises, use ADD_EXERCISE and preserve the existing exercises. Do not classify it as EDIT_WORKOUT.
+4. Use EDIT_WORKOUT only when the request clearly modifies or replaces an exercise or workout details that already exist. Removing, deleting, swapping, changing, updating, renaming, or adjusting sets/reps/weight are edit operations.
+5. Directly asking whether or how an existing workout should be changed can be a WORKOUT_QUESTION, but an executable request to change it is EDIT_WORKOUT.
+
 Set directResponse to a short friendly answer only when the prompt is a general greeting, test, or other request that does not need workout data or an execution AI call.
 For requests that need workout data or exercise data, set directResponse to an empty string.
 Return the intent and directResponse.`,
-    prompt,
+    prompt: `${workoutContext}\n\nUSER REQUEST:\n${prompt}`,
     responseSchema: intentSchema,
   });
 
@@ -534,6 +555,26 @@ Return the intent and directResponse.`,
   if (!["WORKOUT_QUESTION", "EDIT_WORKOUT", "ADD_EXERCISE"].includes(response.intent)) {
     return { intent: "WORKOUT_QUESTION" };
   }
+
+  const request = String(prompt).toLowerCase();
+  const explicitlyEditsWorkout = /\b(remove|delete|swap|replace|change|update|rename|adjust|increase|decrease|modify|progress)\b/.test(request)
+    || /\b(set|make)\s+(the\s+)?(weight|reps|sets|rest|track|exercise)\b/.test(request);
+  const clearlyAddsExercises = /\b(create|build|compose|generate|add|put|fill|make)\b/.test(request)
+    && /\b(workout|exercise|exercises|day|routine|chest|back|legs?|shoulders?|arms?|biceps?|triceps?|push|pull)\b/.test(request)
+    || /\b(give|suggest)\s+(me\s+)?(a\s+)?(workout|exercises?|some exercises?)\b/.test(request)
+    || activeExerciseCount === 0
+      && /\b(chest|back|legs?|shoulders?|arms?|biceps?|triceps?|push|pull|upper body|lower body|workout|routine)\b/.test(request)
+      && /\b(exercise|exercises|day|workout|routine|create|build|make|give|suggest)\b/.test(request);
+
+  if (clearlyAddsExercises && !explicitlyEditsWorkout
+    && (response.intent === "EDIT_WORKOUT" || response.intent === "WORKOUT_QUESTION")) {
+    return {
+      ...response,
+      intent: "ADD_EXERCISE",
+      directResponse: "",
+    };
+  }
+
   return response;
 };
 

@@ -107,6 +107,8 @@ const UserSchema = new mongoose.Schema({
                 },
                 aiWorkoutHelper: {
                     used: 0,
+                    credits: 10,
+                    lastReset: Date.now(),
                 }
             },
             preferences: {
