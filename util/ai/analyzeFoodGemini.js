@@ -56,7 +56,8 @@ const analyzeFoodGemini = async ({ imageBase64, userPrompt }) => {
   try {
     const result = await ai.models.generateContent({
       // model: "gemini-2.0-flash-lite", 
-      model: "gemini-2.5-flash-lite",
+      // model: "gemini-2.5-flash-lite",
+      model: "gemini-3.5-flash-lite",
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema, // This "locks" the output format

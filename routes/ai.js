@@ -423,7 +423,7 @@ router.post("/aicoach", authToken, coachLimiter, async (req, res) => {
             userPrompt, 
             history: historyForAI,
             aiContext,
-            aiModel: "gemini-3.1-flash-lite",
+            aiModel: "gemini-3.5-flash",
         });
         if (aiResponse.isOverloaded) {
           return res.json({ 

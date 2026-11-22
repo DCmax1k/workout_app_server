@@ -15,7 +15,7 @@ const responseSchema = {
   required: ["message"]
 };
 
-const aiCoach = async ({ userPrompt, history = [], aiContext, aiModel = "gemini-2.5-flash-lite" }) => {
+const aiCoach = async ({ userPrompt, history = [], aiContext, aiModel = "gemini-3.5-flash-lite" }) => {
   const { profile, specs, workoutsForAI, totalNutritionForAI } = aiContext;
 
   // console.log("Workouts added to prompt ", workoutsForAI);
