@@ -22,6 +22,16 @@ router.post("/aiworkout/classify", authToken, async (req, res) => {
     if (typeof prompt !== "string" || !prompt.trim()) {
       return res.json({ status: "error", message: "Please enter a prompt." });
     }
+    const user = await User.findById(req.userId);
+    if (!user) return res.json({ status: "error", message: "User not found" });
+    if (!user.extraDetails) user.extraDetails = {};
+    if (!user.extraDetails.ai) user.extraDetails.ai = {};
+    if (!user.extraDetails.ai.aiWorkoutHelper) user.extraDetails.ai.aiWorkoutHelper = { used: 0 };
+    const used = Number(user.extraDetails.ai.aiWorkoutHelper.used);
+    user.extraDetails.ai.aiWorkoutHelper.used = (Number.isFinite(used) ? used : 0) + 1;
+    user.markModified("extraDetails");
+    await user.save();
+
     const response = await aiWorkout.classifyWorkoutIntent(prompt.trim());
     //console.log(`[AI Workout] Classification completed in ${Date.now() - classifyStartedAt}ms: ${response.intent || "error"}`);
     if (response.isOverloaded) {

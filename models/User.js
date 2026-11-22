@@ -104,6 +104,9 @@ const UserSchema = new mongoose.Schema({
                 },
                 aiCoach: {
                     used: 0,
+                },
+                aiWorkoutHelper: {
+                    used: 0,
                 }
             },
             preferences: {

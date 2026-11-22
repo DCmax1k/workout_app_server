@@ -263,6 +263,59 @@ const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
 
 const normalizeName = (name = "") => String(name).toLowerCase().replace(/[^a-z0-9]/g, "");
 
+const getRequestedSetCount = (prompt) => {
+  const match = String(prompt).match(/(?:^|\s)(\d+)\s*(?:sets?|rounds?)\b/i);
+  return match ? Math.max(1, parseInt(match[1], 10)) : 3;
+};
+
+const getFirstNumber = (prompt, pattern) => {
+  const match = String(prompt).match(pattern);
+  return match ? match[1] : null;
+};
+
+const normalizeAddedWorkoutItems = (prompt, items) => {
+  return (Array.isArray(items) ? items : []).map(rawItem => {
+    if (!rawItem || typeof rawItem !== "object") return rawItem;
+
+    const tracks = Array.isArray(rawItem.tracks) ? rawItem.tracks : [];
+    const setCount = getRequestedSetCount(prompt);
+    const sets = Array.from({ length: setCount }, () => {
+      const set = {};
+
+      tracks.forEach(track => {
+        let value = "0";
+        if (track === "weight") {
+          value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)\b/i);
+          if (!value && !/reps?|repetitions?/i.test(prompt)) value = "100";
+          if (!value) value = "0";
+        } else if (track === "weightPlus") {
+          value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)\b/i) || "0";
+        } else if (track === "reps") {
+          value = getFirstNumber(prompt, /(?:of\s*)?(\d+)\s*(?:reps?|repetitions?)\b/i)
+            || getFirstNumber(prompt, /\b(\d+)\s*x\s*\d+\b/i);
+          if (!value && !/weight|lbs?|pounds?|kg|kilograms?/i.test(prompt)) value = "10";
+          if (!value) value = "0";
+        } else if (track === "mile") {
+          value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:miles?|mi)\b/i) || "0";
+        } else if (track === "time") {
+          value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|min|seconds?|secs?|sec)\b/i) || "0";
+        } else if (track === "incline") {
+          value = getFirstNumber(prompt, /(\d+(?:\.\d+)?)\s*(?:%\s*)?(?:incline|grade)\b/i) || "0";
+        }
+        set[track] = value;
+      });
+
+      return set;
+    });
+
+    return {
+      ...rawItem,
+      tracks,
+      sets,
+    };
+  });
+};
+
 const classifyWorkoutIntent = async (prompt) => {
   const response = await generateWithFallback({
     systemInstruction: `Classify the user's workout request into exactly one operation.
@@ -350,6 +403,11 @@ The tracks array is required and MUST use exactly one of these combinations:
 - timeOnly: ["time"]
 - treadmill: ["mile","incline","time"]
 Choose repsOnly ["reps"] for jumping jacks and other rep-based bodyweight exercises.
+Set count and values follow the request:
+- If the user asks for a complete workout or simply adds exercises without specifying set count or strength values, use exactly 3 sets for strength exercises and normal beginner values of "100" weight and "10" reps.
+- If the user specifies one track only, set that track to the requested value and set every unspecified strength track to "0".
+- If the user specifies a set count, reps, weight, distance, time, or incline, use those values for every set unless they explicitly vary sets.
+- Never leave strength track values empty or use "false". Use "0" when not specified and when only another strength track was requested.
 Each set must be an object keyed by each track, with string values. Example: tracks ["weight","reps"], sets [{"weight":"100","reps":"3"},{"weight":"100","reps":"3"},{"weight":"100","reps":"3"}].
 For jumping jacks with "3 sets of 10", use tracks ["reps"], sets [{"reps":"10"},{"reps":"10"},{"reps":"10"}].
 Set group to "created". Set muscleGroups to an array of specific lowercase muscles from Exercises.js, not categories like chest/leg? Existing values include chest, abs, back, biceps, triceps, forearms, shoulders, legs, calves, glutes, hamstrings, quadriceps, core, obliques, etc. Use no invented spelling.
@@ -371,6 +429,13 @@ Do not include an image. Use the user's requested set count and values. Existing
       intent,
       message: typeof response.message === "string" ? response.message : "",
       items: normalizeWorkoutEditItems(prompt, response.items, activeExercises),
+    };
+  }
+  if (intent === "ADD_EXERCISE") {
+    return {
+      intent,
+      message: typeof response.message === "string" ? response.message : "",
+      items: normalizeAddedWorkoutItems(prompt, response.items),
     };
   }
   return {
