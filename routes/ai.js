@@ -99,7 +99,7 @@ router.post("/aiworkout/execute", authToken, async (req, res) => {
   const executeStartedAt = Date.now();
   //console.log(`[AI Workout] Execute request started: ${req.body.intent}`);
   try {
-    const { prompt, intent, activeWorkout, activeExercises, existingExerciseNames } = req.body;
+    const { prompt, intent, activeWorkout, activeExercises, existingExercises } = req.body;
     if (typeof prompt !== "string" || !prompt.trim()) {
       return res.json({ status: "error", message: "Please enter a prompt." });
     }
@@ -112,7 +112,7 @@ router.post("/aiworkout/execute", authToken, async (req, res) => {
       intent,
       activeWorkout,
       activeExercises,
-      existingExerciseNames,
+      existingExercises,
     });
     //console.log(`[AI Workout] Execute request completed in ${Date.now() - executeStartedAt}ms: ${req.body.intent}`);
     if (response.isOverloaded) {
