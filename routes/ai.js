@@ -13,6 +13,72 @@ const analyzeFoodTextOpenAi = require('../util/ai/analyzeFoodTextOpenAi');
 const analyzeFoodTextGemini = require('../util/ai/analyseFoodTextGemini');
 const AICoachChat = require('../models/AICoachChat');
 const aiCoach = require('../util/ai/aiCoach');
+const aiWorkout = require('../util/ai/aiWorkout');
+
+router.post("/aiworkout/classify", authToken, async (req, res) => {
+  const classifyStartedAt = Date.now();
+  try {
+    const { prompt } = req.body;
+    if (typeof prompt !== "string" || !prompt.trim()) {
+      return res.json({ status: "error", message: "Please enter a prompt." });
+    }
+    const response = await aiWorkout.classifyWorkoutIntent(prompt.trim());
+    //console.log(`[AI Workout] Classification completed in ${Date.now() - classifyStartedAt}ms: ${response.intent || "error"}`);
+    if (response.isOverloaded) {
+      return res.json({ status: "error", message: "The AI is busy. Please try again in a moment." });
+    }
+    if (response.isTimedOut) {
+      return res.json({ status: "error", message: "The AI took too long. Please try again." });
+    }
+    if (response.isInvalidJson) {
+      return res.json({ status: "error", message: "The AI returned an incomplete response. Please try again." });
+    }
+    res.json({
+      status: "success",
+      intent: response.intent,
+      directResponse: typeof response.directResponse === "string" ? response.directResponse.trim() : "",
+    });
+  } catch (error) {
+    console.error("AI workout classify error:", error);
+    res.status(500).json({ status: "error", message: "Unable to classify your request." });
+  }
+});
+
+router.post("/aiworkout/execute", authToken, async (req, res) => {
+  const executeStartedAt = Date.now();
+  //console.log(`[AI Workout] Execute request started: ${req.body.intent}`);
+  try {
+    const { prompt, intent, activeWorkout, activeExercises, existingExerciseNames } = req.body;
+    if (typeof prompt !== "string" || !prompt.trim()) {
+      return res.json({ status: "error", message: "Please enter a prompt." });
+    }
+    if (!["WORKOUT_QUESTION", "EDIT_WORKOUT", "ADD_EXERCISE"].includes(intent)) {
+      return res.json({ status: "error", message: "Invalid workout request." });
+    }
+
+    const response = await aiWorkout.executeWorkoutIntent({
+      prompt: prompt.trim(),
+      intent,
+      activeWorkout,
+      activeExercises,
+      existingExerciseNames,
+    });
+    //console.log(`[AI Workout] Execute request completed in ${Date.now() - executeStartedAt}ms: ${req.body.intent}`);
+    if (response.isOverloaded) {
+      return res.json({ status: "error", message: "The AI is busy. Please try again in a moment." });
+    }
+    if (response.isTimedOut) {
+      return res.json({ status: "error", message: "The AI took too long. Please try again." });
+    }
+    if (response.isInvalidJson) {
+      return res.json({ status: "error", message: "The AI returned an incomplete response. Please try again." });
+    }
+    res.json({ status: "success", analysis: response });
+  } catch (error) {
+    console.error("AI workout execute error:", error);
+    res.status(500).json({ status: "error", message: "Unable to process your workout request." });
+  }
+});
 
 // TESTING ROUTE
 router.get('/testai', (req, res) => {
