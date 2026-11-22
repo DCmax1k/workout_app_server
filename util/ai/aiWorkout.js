@@ -162,6 +162,107 @@ const generateWithFallback = async (options) => {
   return response;
 };
 
+const getExplicitRepEdit = (prompt) => {
+  const fromToMatch = prompt.match(/\breps?\s*(?:of\s*)?(?:from\s*)?(\d+(?:\.\d+)?).{0,40}?(?:to|into|->)\s*(\d+(?:\.\d+)?)\b/i);
+  if (fromToMatch) return { from: fromToMatch[1], to: fromToMatch[2] };
+
+  const updateToMatch = prompt.match(/\breps?(?:\s+\w+){0,8}?\s*(?:to|at|of)\s*(\d+(?:\.\d+)?)\b/i);
+  if (/update|change|set/i.test(prompt) && updateToMatch) {
+    return { from: null, to: updateToMatch[1] };
+  }
+  return null;
+};
+
+const normalizeWorkoutEditItems = (prompt, items, activeExercises) => {
+  const exercises = Array.isArray(activeExercises) ? activeExercises : [];
+  const repEdit = getExplicitRepEdit(prompt);
+  const deduplicated = new Map();
+
+  (Array.isArray(items) ? items : []).forEach(rawItem => {
+    if (!rawItem || typeof rawItem !== "object") return;
+    const target = exercises.find(exercise =>
+      exercise.uniqueId === rawItem.exerciseUniqueId
+    ) || exercises.find(exercise =>
+      typeof rawItem.name === "string"
+      && normalizeName(exercise.name) === normalizeName(rawItem.name)
+    );
+    if (!target?.uniqueId) return;
+
+    const existing = deduplicated.get(target.uniqueId);
+    const merged = existing ? {
+      ...existing,
+      ...rawItem,
+      exercise: rawItem.exercise && typeof rawItem.exercise === "object"
+        ? { ...existing.exercise, ...rawItem.exercise }
+        : existing.exercise,
+      changes: rawItem.changes && typeof rawItem.changes === "object"
+        ? { ...existing.changes, ...rawItem.changes }
+        : existing.changes,
+      sets: Array.isArray(rawItem.sets) && rawItem.sets.length ? rawItem.sets : existing.sets,
+    } : { ...rawItem };
+
+    const tracks = Array.isArray(target.tracks) && target.tracks.length
+      ? target.tracks
+      : Array.isArray(merged.changes?.tracks)
+        ? merged.changes.tracks
+        : Array.isArray(merged.exercise?.tracks)
+          ? merged.exercise.tracks
+          : ["reps"];
+    const incomingSets = Array.isArray(merged.changes?.sets)
+      ? merged.changes.sets
+      : Array.isArray(merged.exercise?.sets)
+        ? merged.exercise.sets
+        : Array.isArray(merged.sets)
+          ? merged.sets
+          : [];
+    const setCount = Math.max(
+      target.sets?.length ?? 0,
+      incomingSets.length,
+      0
+    );
+    const normalizedSets = Array.from({ length: setCount }, (_, index) => {
+      const incomingSet = incomingSets[index] || {};
+      const targetSet = target.sets?.[index] || {};
+      const set = {};
+
+      tracks.forEach(track => {
+        let value = incomingSet[track];
+        if (value === undefined || value === null || value === "" || value === false || value === "false") {
+          value = targetSet[track];
+        }
+        set[track] = value === undefined || value === null ? "" : String(value);
+      });
+
+      if (tracks.includes("reps") && repEdit) {
+        set.reps = repEdit.from
+          ? (String(set.reps) === repEdit.from ? repEdit.to : set.reps)
+          : repEdit.to;
+      }
+      return set;
+    });
+
+    deduplicated.set(target.uniqueId, {
+      ...merged,
+      exerciseUniqueId: target.uniqueId,
+      changes: {
+        ...(merged.changes && typeof merged.changes === "object" ? merged.changes : {}),
+        tracks,
+        sets: normalizedSets,
+      },
+      exercise: {
+        ...(merged.exercise && typeof merged.exercise === "object" ? merged.exercise : {}),
+        name: target.name,
+        tracks,
+        sets: normalizedSets,
+      },
+    });
+  });
+
+  return [...deduplicated.values()];
+};
+
+const normalizeName = (name = "") => String(name).toLowerCase().replace(/[^a-z0-9]/g, "");
+
 const classifyWorkoutIntent = async (prompt) => {
   const response = await generateWithFallback({
     systemInstruction: `Classify the user's workout request into exactly one operation.
@@ -265,6 +366,13 @@ Do not include an image. Use the user's requested set count and values. Existing
   });
 
   if (response.isOverloaded || response.isTimedOut || response.isInvalidJson) return response;
+  if (intent === "EDIT_WORKOUT") {
+    return {
+      intent,
+      message: typeof response.message === "string" ? response.message : "",
+      items: normalizeWorkoutEditItems(prompt, response.items, activeExercises),
+    };
+  }
   return {
     intent,
     message: typeof response.message === "string" ? response.message : "",
