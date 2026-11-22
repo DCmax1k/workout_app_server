@@ -600,6 +600,32 @@ router.post('/saveworkout', authToken, async (req, res) => {
     }
 });
 
+router.post('/updateworkouts', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+        const {workouts} = req.body;
+        if (!workouts || !Array.isArray(workouts)) return res.json({status: "error", message: "Invalid workouts data"});
+
+        const savedWorkouts = user.savedWorkouts;
+        workouts.forEach(workout => {
+            const idx = savedWorkouts.findIndex(w => w.id === workout.id);
+            if (idx >= 0) {
+                savedWorkouts[idx] = workout;
+            }
+        });
+        user.savedWorkouts = savedWorkouts;
+        user.markModified("savedWorkouts");
+        await user.save();
+        
+        
+        res.json({status: "success", });
+
+    } catch(err) {
+        console.error(err);
+    }
+});
+
 router.post('/removeworkout', authToken, async (req, res) => {
     try {
         const user = await User.findById(req.userId);
