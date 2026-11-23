@@ -157,6 +157,12 @@ html {
   width: 80%;
 }
 
+@media screen and (max-width: 600px) {
+  .Admin .admin-person-options {
+    width: 100vw !important;
+  }
+}
+
 
 @media screen and (max-width: 80vh) {
   

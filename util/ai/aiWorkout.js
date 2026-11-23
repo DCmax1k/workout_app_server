@@ -249,7 +249,9 @@ Do not output an item without exerciseUniqueId, tracks, or sets. Return valid JS
 `
     : `
 Create or find exercises requested by the user.
-Prefer an existing exercise when a close match is available. For an existing exercise, set action="existing", id to its supplied id, name to its exact name, and tracks to its supplied tracks.
+Prefer an existing exercise when a close match is available.
+For an existing exercise, output exactly: action="existing", id from availableExercises, exact name, and sets.
+Do not output tracks, exerciseUniqueId, uniqueId, description, muscleGroups, met, unit, or any other metadata for existing exercises.
 Never add an exercise that is already in the supplied active workout. If the requested exercise is already active, do not return it as an add result.
 Never invent or copy an exerciseUniqueId or uniqueId.
 For every existing or created exercise, output 3 sets unless the user explicitly specifies set count or values. Every set must contain a value for each track.
@@ -281,6 +283,12 @@ Return valid JSON only.
         const existing = item.action === "existing"
           ? (existingExercises || []).find(exercise => exercise.id === item.id)
           : null;
+        const alreadyActive = existing
+          ? (activeExercises || []).some(exercise =>
+              exercise.id === existing.id
+              || (exercise.name || "").toLowerCase() === (existing.name || "").toLowerCase())
+          : false;
+        if (alreadyActive) return null;
         const tracks = existing?.tracks || item.tracks || [];
         const normalizedSets = normalizeSetsForTracks(tracks, combinePartialSets(tracks, item.sets));
         const sets = explicitSetCount === 0
@@ -288,6 +296,14 @@ Return valid JSON only.
           : explicitSetCount !== null
             ? Array.from({ length: explicitSetCount }, (_, index) => normalizedSets[index] || normalizedSets[0] || normalizeSetsForTracks(tracks, null)[0])
             : normalizedSets;
+        if (existing) {
+          return {
+            action: "existing",
+            id: existing.id,
+            name: existing.name,
+            sets,
+          };
+        }
         return {
           ...item,
           exerciseUniqueId: undefined,
@@ -295,7 +311,7 @@ Return valid JSON only.
           tracks,
           sets,
         };
-      });
+      }).filter(Boolean);
     }
     if (intent === "EDIT_WORKOUT") {
       const aiItems = Array.isArray(response.items) ? response.items : [];

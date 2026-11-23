@@ -132,6 +132,31 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
     
   }
 
+  const addWorkoutHelperCredits = async () => {
+    const response = await sendData("/admin/addaiworkouthelpercredits", {userId: editPerson._id});
+    if (response.status !== "success") {
+      console.log(response.message);
+      return;
+    }
+    const currentCredits = Number(editPerson.extraDetails?.ai?.aiWorkoutHelper?.credits);
+    const credits = (Number.isFinite(currentCredits) ? currentCredits : 10) + 10;
+    const newPerson = {
+      ...editPerson,
+      extraDetails: {
+        ...editPerson.extraDetails,
+        ai: {
+          ...editPerson.extraDetails?.ai,
+          aiWorkoutHelper: {
+            ...editPerson.extraDetails?.ai?.aiWorkoutHelper,
+            credits,
+          },
+        },
+      },
+    };
+    setPerson(newPerson);
+    window.alert("Successful");
+  }
+
   const deleteAccount = async () => {
     const response = await sendData('/admin/deleteaccount', {userId: editPerson._id});
     if (response.status !== "success") {
@@ -210,7 +235,7 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
     <div className='Admin' style={{width: "100%"}} {...props}>
 
       {editPerson && (
-        <div style={{position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", padding: "2vh", display: "flex", flexDirection: "column", minHeight: 300, width: 300, backgroundColor: "#3f3f3fff", cursor: "pointer", zIndex: 5}}>
+        <div className="admin-person-options" style={{position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", padding: "2vh", display: "flex", flexDirection: "column", minHeight: 300, maxHeight: "100vh", overflowY: "auto", width: 420, backgroundColor: "#3f3f3fff", cursor: "pointer", zIndex: 5}}>
           <div style={{display: "flex", flexDirection: "row", gap: 10, justifyContent: "space-between"}}>
             <button onClick={() => setEditPerson(null)}>close</button>
             <button onClick={() => openViewUserData(editPerson._id)}>View User Data</button>
@@ -225,6 +250,8 @@ const LoggedInAdmin = ({style, user, users, setUsers, supportTickets, setSupport
           <h4>{editPerson.extraDetails.ai?.aiWorkoutHelper?.used ?? 0} AI Workout Helper used</h4>
           <div style={{marginTop: '1vh'}}></div>
           <button onClick={addCredit}>Add 1 image Credit</button>
+          <div style={{marginTop: '1vh'}}></div>
+          <button onClick={addWorkoutHelperCredits}>Add 10 Workout Helper Credits</button>
           <div style={{marginTop: '1vh'}}></div>
           <label>Warns - {editPerson.trouble?.warnings?.filter(a => a.active).length ?? 0} active</label>
           <input value={warnTitleValue} placeholder='title' onInput={(e) => setWarnTitleValue(e.target.value)} />

@@ -258,6 +258,46 @@ router.post("/addaicredit", authToken, async (req, res) => {
     }
 });
 
+router.post("/addaiworkouthelpercredits", authToken, async (req, res) => {
+    try {
+        const admin = await User.findById(req.userId);
+        if (admin.rank !== 'admin') {
+            return res.json({
+                status: 'error',
+                message: 'Not admin.',
+            });
+        }
+
+        const { userId } = req.body;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.json({
+                status: 'error',
+                message: 'User not found.',
+            });
+        }
+
+        user.extraDetails = user.extraDetails || {};
+        user.extraDetails.ai = user.extraDetails.ai || {};
+        user.extraDetails.ai.aiWorkoutHelper = user.extraDetails.ai.aiWorkoutHelper || {};
+
+        const currentCredits = Number(user.extraDetails.ai.aiWorkoutHelper.credits);
+        user.extraDetails.ai.aiWorkoutHelper.credits = (Number.isFinite(currentCredits) ? currentCredits : 10) + 10;
+        user.markModified("extraDetails");
+        await user.save();
+
+        return res.json({
+            status: "success",
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Internal error',
+        });
+    }
+});
+
 router.post("/deleteaccount", authToken, async (req, res) => {
     try {
         const admin = await User.findById(req.userId);
