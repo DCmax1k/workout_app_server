@@ -672,6 +672,27 @@ router.post('/updatesettings', authToken, async (req, res) => {
     }
 });
 
+router.post('/updatevisiblewidgets', authToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.json({status: "error", message: "User not found"});
+
+        const {visibleWidgets} = req.body;
+        if (!Array.isArray(visibleWidgets) || visibleWidgets.some(widget => typeof widget !== 'string' || widget.length > 100)) {
+            return res.json({status: "error", message: "Invalid visible widgets"});
+        }
+
+        user.tracking.visibleWidgets = visibleWidgets;
+        user.markModified("tracking");
+        await user.save();
+
+        res.json({status: "success"});
+    } catch(err) {
+        console.error(err);
+        res.status(500).json({status: "error", message: "Failed to update visible widgets"});
+    }
+});
+
 router.post('/pushloggingweightlayout', authToken, async (req, res) => {
     try {
         const user = await User.findById(req.userId);

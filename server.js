@@ -388,7 +388,14 @@ app.post('/auth', authToken, async (req, res) => {
         // Testing functions - Fake delay, or error status
         //await new Promise(resolve => setTimeout(resolve, 5000));
         //return res.json({status: 'error', message: "Testing error message that is super long to test the alert notification that I made yesterday!"});
-        const fullLocalUser = {recentActivity, ...{...user, pastWorkouts: user.pastWorkouts.slice(0, 50)}};
+        const fullLocalUser = {
+            recentActivity,
+            ...{...user, pastWorkouts: user.pastWorkouts.slice(0, 50)},
+            tracking: {
+                ...user.tracking,
+                visibleWidgets: user.tracking?.visibleWidgets ?? ["nutrition"],
+            },
+        };
         // console.log('successfully returning');
         return res.json({
             status: 'success',
